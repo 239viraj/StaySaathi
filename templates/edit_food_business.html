@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Food Business</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="edit-food-business">
+
+    <div class="edit-food-header">
+        <h1>Edit Business Details</h1>
+
+        <p>Update your business information and menu photos.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="edit-food-message {{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="edit-food-form">
+
+        <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}">
+
+        <label for="business_name">Business Name *</label>
+
+        <input
+            type="text"
+            id="business_name"
+            name="business_name"
+            value="{{ business.business_name }}"
+            required>
+
+        <label for="category">Food Category *</label>
+
+        <select id="category" name="category" required>
+            {% for option in [
+                'Restaurant',
+                'Cafe',
+                'Tiffin Service',
+                'Street Food',
+                'Bakery',
+                'Other'
+            ] %}
+                <option
+                    value="{{ option }}"
+                    {% if business.category|lower == option|lower %}
+                        selected
+                    {% endif %}>
+                    {{ option }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="phone">Phone Number *</label>
+
+        <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value="{{ business.phone }}"
+            required>
+
+        <label for="address">Address *</label>
+
+        <textarea
+            id="address"
+            name="address"
+            rows="3"
+            required>{{ business.address }}</textarea>
+
+        <div class="edit-food-coordinate-grid">
+
+        
+        <div>
+            <label for="latitude">Latitude</label>
+            <input
+                type="number"
+                step="any"
+                id="latitude"
+                name="latitude"
+                value="{{ business.latitude if business.latitude is not none else '' }}"
+                placeholder="Latitude">
+        </div>
+
+        <div>
+            <label for="longitude">Longitude</label>
+            <input
+                type="number"
+                step="any"
+                id="longitude"
+                name="longitude"
+                value="{{ business.longitude if business.longitude is not none else '' }}"
+                placeholder="Longitude">
+        </div>
+        
+
+        </div>
+
+        <button
+        type="button"
+        id="current-location-btn"
+        class="current-location-btn">
+        📍 Use My Current Location </button>
+
+        <p id="location-status" class="location-status" aria-live="polite">
+            Click the button to automatically fill in your current coordinates.
+        </p>
+
+        <label for="description">Description</label>
+
+        <textarea
+            id="description"
+            name="description"
+            rows="4">{{ business.description or '' }}</textarea>
+
+        <label for="opening_hours">Opening Hours</label>
+
+        <input
+            type="text"
+            id="opening_hours"
+            name="opening_hours"
+            value="{{ business.opening_hours or '' }}"
+            placeholder="e.g. 9 AM - 10 PM">
+
+        <div class="edit-food-section">
+            <h2>Current Menu Photos</h2>
+
+            {% if business.display_menu_photos %}
+
+                <div class="edit-food-photo-grid">
+
+                    {% for photo in business.display_menu_photos %}
+
+                        <div class="edit-food-photo">
+
+                            <img
+                                src="{{ url_for('static', filename=photo) }}"
+                                alt="Menu photo">
+
+                            <label class="edit-food-remove-label">
+                                <input
+                                    type="checkbox"
+                                    name="remove_photos"
+                                    value="{{ photo }}">
+
+                                Remove photo
+                            </label>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <p>No menu photos uploaded.</p>
+
+            {% endif %}
+        </div>
+
+        <label for="menu_photos">Add Menu Photos</label>
+
+        <input
+            type="file"
+            id="menu_photos"
+            name="menu_photos"
+            accept=".jpg,.jpeg,.png,.webp"
+            multiple>
+
+        <p class="edit-food-help">
+            Maximum five menu photos in total. Select existing photos
+            for removal before adding replacements if necessary.
+        </p>
+
+        <div class="edit-food-actions">
+
+            <button type="submit" class="food-owner-primary-btn">
+                Save Changes
+            </button>
+
+            <a
+                href="{{ url_for('food_owner_dashboard') }}"
+                class="edit-food-cancel">
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const locationButton = document.getElementById("current-location-btn");
+    const latitudeInput = document.getElementById("latitude");
+    const longitudeInput = document.getElementById("longitude");
+    const locationStatus = document.getElementById("location-status");
+
+    locationButton.addEventListener("click", function () {
+
+        if (!navigator.geolocation) {
+            locationStatus.textContent =
+                "Your browser does not support location detection.";
+            return;
+        }
+
+        locationButton.disabled = true;
+        locationButton.textContent = "Getting your location...";
+        locationStatus.textContent =
+            "Please allow location access when your browser asks.";
+
+        navigator.geolocation.getCurrentPosition(
+
+            function (position) {
+
+                latitudeInput.value =
+                    position.coords.latitude.toFixed(7);
+
+                longitudeInput.value =
+                    position.coords.longitude.toFixed(7);
+
+                locationStatus.textContent =
+                    "Location added successfully! You can save your changes.";
+
+                locationButton.textContent =
+                    "📍 Refresh Current Location";
+
+                locationButton.disabled = false;
+            },
+
+            function (error) {
+
+                let message = "Unable to retrieve your location.";
+
+                if (error.code === error.PERMISSION_DENIED) {
+                    message =
+                        "Location permission denied. Allow location access in your browser settings.";
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    message =
+                        "Your current location is unavailable. Please try again.";
+                } else if (error.code === error.TIMEOUT) {
+                    message =
+                        "Location request timed out. Please try again.";
+                }
+
+                locationStatus.textContent = message;
+                locationButton.disabled = false;
+                locationButton.textContent =
+                    "📍 Use My Current Location";
+            },
+
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
+
+    });
+
+});
+</script>
+
+</body>
+</html>

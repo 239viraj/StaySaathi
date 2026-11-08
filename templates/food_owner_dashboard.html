@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Food Business Owner Dashboard</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-links">
+            <a href="{{ url_for('notifications') }}" class="food-owner-primary-btn">
+                Notifications
+
+                {% if unread_notification_count > 0 %}
+                    <span class="notification-badge">
+                        {{ unread_notification_count }}
+                    </span>
+                {% endif %}
+            </a>
+        </div>
+    </nav>
+
+<div class="food-owner-dashboard">
+
+    <!-- DASHBOARD HEADER -->
+    <div class="food-owner-header">
+
+        <div>
+            <h1>Food Business Dashboard</h1>
+
+            <p>Welcome, {{ name }}!</p>
+
+            <p>Manage your food businesses and subscriptions here.</p>
+        </div>
+
+        <div>
+            <a href="{{ url_for('home') }}"
+               class="food-owner-primary-btn">
+                Back to Home
+            </a>
+
+            <form action="{{ url_for('logout') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="food-owner-logout-btn">
+                    Logout
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash-message">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- BUSINESS SECTION -->
+    <h2>My Food Businesses</h2>
+
+    {% if businesses %}
+
+        <div class="food-owner-business-grid">
+
+            {% for business in businesses %}
+
+                <div class="food-owner-business-card">
+
+                    <!-- BUSINESS NAME -->
+                    <h3>{{ business.business_name }}</h3>
+
+                    <!-- MENU PHOTOS -->
+                    {% if business.display_menu_photos %}
+
+                        <div class="food-owner-menu-gallery">
+
+                            {% for photo in business.display_menu_photos %}
+
+                                <img
+                                    src="{{ url_for('static', filename=photo) }}"
+                                    alt="Menu photo for {{ business.business_name }}"
+                                    loading="lazy"
+                                >
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <p class="no-menu-photos">
+                            No menu photos uploaded.
+                        </p>
+
+                    {% endif %}
+
+                    <!-- BUSINESS DETAILS -->
+                    <div class="food-owner-business-details">
+
+                        <p>
+                            <strong>Category:</strong>
+                            {{ business.category|replace('_', ' ')|title }}
+                        </p>
+
+                        <p>
+                            <strong>Address:</strong>
+                            {{ business.address }}
+                        </p>
+
+                        <p>
+                            <strong>Phone:</strong>
+                            {{ business.phone }}
+                        </p>
+
+                        <p>
+                            <strong>Description:</strong>
+                            {{ business.description or "Not provided" }}
+                        </p>
+
+                        {% if business.opening_hours %}
+                            <p>
+                                <strong>Opening Hours:</strong>
+                                {{ business.opening_hours }}
+                            </p>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- VERIFICATION DETAILS -->
+                    <div class="food-owner-section">
+
+                        <h4>Verification Details</h4>
+
+                        <p>
+                            <strong>Status:</strong>
+
+                            <span class="food-owner-status {{ business.verification_status|lower }}">
+                                {{ business.verification_status|capitalize }}
+                            </span>
+                        </p>
+
+                        {% if business.verification_status == "pending" %}
+
+                            <div class="food-owner-notice">
+                                Your business registration is waiting for
+                                administrator approval.
+                            </div>
+
+                        {% elif business.verification_status == "rejected" %}
+
+                            <div class="food-owner-notice">
+                                Your registration was rejected.
+                                Please contact the administrator for details.
+                            </div>
+
+                        {% elif business.verification_status == "verified" %}
+
+                            <p>Your business has been verified.</p>
+
+                        {% endif %}
+
+                    </div>
+
+                    <!-- SUBSCRIPTION DETAILS -->
+
+                    <div class="food-owner-section">
+
+                    
+                    <h4>Subscription Details</h4>
+
+                    <p>
+                        <strong>Status:</strong>
+
+                        <span class="food-owner-status {{ business.subscription_status|lower }}">
+                            {{ business.subscription_status|capitalize }}
+                        </span>
+                    </p>
+
+                    <p>
+                        <strong>Plan:</strong>
+
+                        {% if business.subscription_plan %}
+                            {{ business.subscription_plan|capitalize }}
+                        {% else %}
+                            Not selected
+                        {% endif %}
+                    </p>
+
+                    <p>
+                        <strong>Start Date:</strong>
+
+                        {% if business.subscription_start_date %}
+                            {{ business.subscription_start_date.strftime('%d-%m-%Y') }}
+                        {% else %}
+                            Not started
+                        {% endif %}
+                    </p>
+
+                    <p>
+                        <strong>Expiry Date:</strong>
+
+                        {% if business.subscription_expiry_date %}
+                            {{ business.subscription_expiry_date.strftime('%d-%m-%Y') }}
+                        {% else %}
+                            Not set
+                        {% endif %}
+                    </p>
+
+                    {% if business.subscription_status == "active"
+                        and business.subscription_expiry_date
+                        and business.subscription_expiry_date > now %}
+
+                        <p>
+                            <strong>Days Remaining:</strong>
+                            {{ business.days_remaining }} day(s)
+                        </p>
+
+                        {% if business.days_remaining <= 7 %}
+
+                            <div class="food-owner-subscription-warning">
+                                <strong>Subscription Expiring Soon!</strong>
+                                Your subscription expires in
+                                {{ business.days_remaining }} day(s).
+                                Contact the administrator to renew it.
+                            </div>
+
+                        {% else %}
+
+                            <div class="food-owner-subscription-success">
+                                Your subscription is active.
+                                You have {{ business.days_remaining }} day(s) remaining.
+                            </div>
+
+                        {% endif %}
+
+                    {% elif business.subscription_status == "expired"
+                            or (
+                                business.subscription_expiry_date
+                                and business.subscription_expiry_date <= now
+                            ) %}
+
+                        <div class="food-owner-subscription-expired">
+                            <strong>Subscription Expired</strong>
+                            Contact the administrator to reactivate your subscription
+                            and restore your Food Finder visibility.
+                        </div>
+
+                    {% elif business.subscription_status == "pending" %}
+
+                        <div class="food-owner-subscription-warning">
+                            Your subscription is awaiting activation by the administrator.
+                        </div>
+
+                    {% elif business.subscription_status == "inactive" %}
+
+                        <div class="food-owner-subscription-expired">
+                            Your subscription is inactive.
+                            Contact the administrator if you want to reactivate it.
+                        </div>
+                        
+
+                    {% endif %}
+                    <!-- RENEW / PAY SUBSCRIPTION BUTTON -->
+
+                    <a class="approve-btn" href="{{ url_for('food_business_renewal',
+                     business_id=business.id) }}">
+                    Renew / Pay Subscription
+                    </a>
+                                        
+
+                    </div>
+
+                    <!-- FOOD FINDER VISIBILITY -->
+                    <div class="food-owner-section">
+
+                        <h4>Food Finder Visibility</h4>
+
+                        {% if business.verification_status == "verified"
+                              and business.subscription_status == "active"
+                              and business.subscription_expiry_date
+                              and business.subscription_expiry_date > now %}
+
+                            <div class="food-owner-notice">
+                                Your business is eligible to appear in Food Finder.
+                            </div>
+
+                        {% else %}
+
+                            <div class="food-owner-notice">
+                                Your business is not currently eligible to appear
+                                in Food Finder. Check your verification and
+                                subscription status.
+                            </div>
+
+                        {% endif %}
+                        <a
+                            href="{{ url_for('edit_food_business', business_id=business.id) }}"
+                            class="food-owner-primary-btn">
+                            Edit Business
+                        </a>
+                       
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- EMPTY STATE -->
+        <div class="food-owner-empty">
+
+            <h3>No Food Businesses Yet</h3>
+
+            <p>
+                You haven't registered any food businesses.
+                Register your restaurant, dhaba, food stall, or tiffin service
+                to manage its verification and subscription details here.
+            </p>
+
+            <a href="{{ url_for('register_food_business') }}"
+               class="food-owner-primary-btn">
+                Register a Food Business
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
+

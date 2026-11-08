@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<title>OTP Login - PG Finder</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+
+</head>
+
+<body>
+
+
+<!-- Navigation -->
+<header>
+
+    <div class="logo">
+        <a href="{{ url_for('home') }}">
+            StaySaathi
+        </a>
+    </div>
+
+    <nav>
+        <a href="{{ url_for('home') }}">Home</a>
+        <a href="{{ url_for('find_pg') }}">Find Residence</a>
+        <a href="{{ url_for('about') }}">About</a>
+        <a href="{{ url_for('login') }}">Login</a>
+    </nav>
+
+</header>
+
+
+<!-- OTP Login -->
+<main>
+
+    <div class="auth-container">
+
+        <div class="auth-box">
+
+            <h1>StaySaathi</h1>
+
+            <h2>Login with OTP</h2>
+
+            <p>
+                Enter your registered email or phone number
+                to receive a one-time password.
+            </p>
+
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+
+                {% if messages %}
+
+                    <div class="flash-message">
+
+                        {% for category, message in messages %}
+
+                            <p>{{ message }}</p>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <!-- Request OTP Form -->
+            <form method="POST"
+                  action="{{ url_for('request_login_otp') }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <!-- User Role -->
+                <label for="role">
+                    Login as
+                </label>
+
+                <select name="role"
+                        id="role"
+                        required>
+
+                    <option value="student">
+                        Student / Customer
+                    </option>
+
+                    <option value="owner">
+                        PG Owner
+                    </option>
+
+                    <option value="food_owner">
+                        Food Business Owner
+                    </option>
+
+                </select>
+
+
+                <!-- Login Method -->
+                <label for="login_method">
+                    Login using
+                </label>
+
+                <select name="login_method"
+                        id="login_method"
+                        required>
+
+                    <option value="email">
+                        Email Address
+                    </option>
+
+                    <option value="phone">
+                        Phone Number
+                    </option>
+
+                </select>
+
+
+                <!-- Email or Phone -->
+                <label for="identifier">
+                    Email / Phone Number
+                </label>
+
+                <input type="text"
+                       id="identifier"
+                       name="identifier"
+                       placeholder="Enter registered email or phone"
+                       autocomplete="username"
+                       required>
+
+
+                <!-- Request Button -->
+                <button type="submit">
+                    Generate OTP
+                </button>
+
+            </form>
+
+
+            <hr>
+
+
+            <!-- Verify OTP Form -->
+            <h2>Verify OTP</h2>
+
+            <p>
+                Enter the six-digit OTP generated for your login.
+            </p>
+
+            <form method="POST"
+                  action="{{ url_for('verify_login_otp') }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <!-- User Role -->
+                <label for="verify_role">
+                    Login as
+                </label>
+
+                <select name="role"
+                        id="verify_role"
+                        required>
+
+                    <option value="student">
+                        Student / Customer
+                    </option>
+
+                    <option value="owner">
+                        PG Owner
+                    </option>
+
+                    <option value="food_owner">
+                        Food Business Owner
+                    </option>
+
+                </select>
+
+
+                <!-- OTP -->
+                <label for="otp">
+                    Six-Digit OTP
+                </label>
+
+                <input type="text"
+                       id="otp"
+                       name="otp"
+                       placeholder="Enter 6-digit OTP"
+                       inputmode="numeric"
+                       pattern="[0-9]{6}"
+                       minlength="6"
+                       maxlength="6"
+                       autocomplete="one-time-code"
+                       required>
+
+
+                <!-- Verify Button -->
+                <button type="submit">
+                    Verify OTP & Login
+                </button>
+
+            </form>
+
+
+            <!-- Password Login -->
+            <p class="register-text">
+                Prefer using a password?
+
+                <a href="{{ url_for('login') }}">
+                    Back to Login Selection
+                </a>
+            </p>
+
+
+            <!-- Register -->
+            <p class="register-text">
+                Don't have an account?
+
+                <a href="{{ url_for('register') }}">
+                    Create Account
+                </a>
+            </p>
+
+        </div>
+
+    </div>
+
+</main>
+
+</body>
+
+</html>

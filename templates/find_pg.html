@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Find PG - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Leaflet CSS -->
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>    
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         NAVIGATION
+    ========================== -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+            StaySaathi
+        </div>
+
+
+        <div class="nav-links">
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+
+            <a href="{{ url_for('find_pg') }}">
+                Find PG
+            </a>
+
+
+            <a href="{{ url_for('about') }}">
+                About
+            </a>
+
+
+            {% if session.get("user_id") %}
+
+                <a href="{{ url_for('logout') }}">
+                    Logout
+                </a>
+
+            {% else %}
+
+                <a href="{{ url_for('login') }}">
+                    Login
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- =========================
+         PAGE HEADER
+    ========================== -->
+
+    <section class="find-pg-header">
+
+        <h1>
+            Find Your Residence
+        </h1>
+
+        <p>
+            Find a suitable Residence based on your location and requirements.
+        </p>
+
+    </section>
+
+
+
+    <!-- =========================
+         SEARCH SECTION
+    ========================== -->
+
+    <section class="pg-search-container">
+
+        <form
+            action="{{ url_for('find_pg') }}"
+            method="GET"
+            class="pg-search-form"
+        >
+
+
+            <!-- =========================
+                 LOCATION
+            ========================== -->
+
+            <div class="search-field">
+
+                <label for="location">
+                    Location
+                </label>
+
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="Enter location"
+                    value="{{ location or '' }}"
+                >
+
+            </div>
+
+
+
+            <!-- =========================
+                 GENDER
+            ========================== -->
+
+            <div class="search-field">
+
+                <label for="gender">
+                    Residence For
+                </label>
+
+                <select
+                    id="gender"
+                    name="gender"
+                >
+
+                    <option
+                        value="Any"
+                        {% if not gender or gender|lower == "any" %}
+                            selected
+                        {% endif %}
+                    >
+                        Any
+                    </option>
+
+
+                    <option
+                        value="Boys"
+                        {% if gender|lower == "boys" %}
+                            selected
+                        {% endif %}
+                    >
+                        Boys
+                    </option>
+
+
+                    <option
+                        value="Girls"
+                        {% if gender|lower == "girls" %}
+                            selected
+                        {% endif %}
+                    >
+                        Girls
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- =========================
+                 AVAILABILITY
+            ========================== -->
+
+            <div class="availability-filter">
+
+                <input
+                    type="checkbox"
+                    id="available_only"
+                    name="available_only"
+                    value="on"
+
+                    {% if available_only %}
+                        checked
+                    {% endif %}
+                >
+
+                <label for="available_only">
+                    Show only Residence with available rooms/beds
+                </label>
+
+            </div>
+
+
+
+            <!-- =========================
+                 SORTING
+            ========================== -->
+
+            <div class="search-field">
+
+                <label for="sort_by">
+                    Sort Results
+                </label>
+
+                <select
+                    id="sort_by"
+                    name="sort_by"
+                >
+
+                    <option
+                        value="relevance"
+                        {% if sort_by == "relevance" %}
+                            selected
+                        {% endif %}
+                    >
+                        Relevance
+                    </option>
+
+
+                    <option
+                        value="nearest"
+                        {% if sort_by == "nearest" %}
+                            selected
+                        {% endif %}
+                    >
+                        Nearest First
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- =========================
+                DISTANCE RADIUS
+            ========================= -->
+
+            <div class="search-field">
+
+                <label for="radius">
+                    Search Radius
+                </label>
+
+                <select
+                    id="radius"
+                    name="radius"
+                >
+
+                    <option
+                        value="any"
+                        {% if radius == "any" or not radius %}
+                            selected
+                        {% endif %}
+                    >
+                        Any Distance
+                    </option>
+
+                    <option
+                        value="1"
+                        {% if radius == "1" %}
+                            selected
+                        {% endif %}
+                    >
+                        Within 1 km
+                    </option>
+
+                    <option
+                        value="3"
+                        {% if radius == "3" %}
+                            selected
+                        {% endif %}
+                    >
+                        Within 3 km
+                    </option>
+
+                    <option
+                        value="5"
+                        {% if radius == "5" %}
+                            selected
+                        {% endif %}
+                    >
+                        Within 5 km
+                    </option>
+
+                    <option
+                        value="10"
+                        {% if radius == "10" %}
+                            selected
+                        {% endif %}
+                    >
+                        Within 10 km
+                    </option>
+
+                    <option
+                        value="20"
+                        {% if radius == "20" %}
+                            selected
+                        {% endif %}
+                    >
+                        Within 20 km
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- =========================
+                 CURRENT LOCATION
+            ========================== -->
+
+            <div class="location-search-section">
+
+                <button
+                    type="button"
+                    id="find-location-button"
+                    onclick="getFindPGLocation()"
+                >
+                    📍 Use My Location
+                </button>
+
+
+                <p id="find-location-status">
+
+                    {% if user_latitude and user_longitude %}
+
+                        ✓ Location captured.
+                        You can now sort by distance.
+
+                    {% else %}
+
+                        Use your current location to sort PGs by distance.
+
+                    {% endif %}
+
+                </p>
+
+
+                <input
+                    type="hidden"
+                    id="search-latitude"
+                    name="latitude"
+                    value="{{ user_latitude or '' }}"
+                >
+
+
+                <input
+                    type="hidden"
+                    id="search-longitude"
+                    name="longitude"
+                    value="{{ user_longitude or '' }}"
+                >
+
+            </div>
+
+
+
+            <!-- =========================
+                 FACILITY FILTERS
+            ========================== -->
+
+            <div class="facility-filter-section">
+
+                <h3>
+                    Facilities
+                </h3>
+
+
+                <p class="filter-description">
+                    Select the facilities you want in your PG.
+                </p>
+
+
+                <div class="facility-filter-grid">
+
+
+                    <!-- Wi-Fi -->
+
+                    <label class="facility-filter">
+
+                        <input
+                            type="checkbox"
+                            name="wifi"
+                            value="on"
+
+                            {% if wifi %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <span>
+                            📶 Wi-Fi
+                        </span>
+
+                    </label>
+
+
+
+                    <!-- Laundry -->
+
+                    <label class="facility-filter">
+
+                        <input
+                            type="checkbox"
+                            name="laundry"
+                            value="on"
+
+                            {% if laundry %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <span>
+                            🧺 Laundry
+                        </span>
+
+                    </label>
+
+
+
+                    <!-- AC -->
+
+                    <label class="facility-filter">
+
+                        <input
+                            type="checkbox"
+                            name="ac"
+                            value="on"
+
+                            {% if ac %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <span>
+                            ❄️ AC
+                        </span>
+
+                    </label>
+
+
+
+                    <!-- CCTV -->
+
+                    <label class="facility-filter">
+
+                        <input
+                            type="checkbox"
+                            name="cctv"
+                            value="on"
+
+                            {% if cctv %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <span>
+                            📹 CCTV
+                        </span>
+
+                    </label>
+
+
+
+                    <!-- Power Backup -->
+
+                    <label class="facility-filter">
+
+                        <input
+                            type="checkbox"
+                            name="power_backup"
+                            value="on"
+
+                            {% if power_backup %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <span>
+                            🔋 Power Backup
+                        </span>
+
+                    </label>
+
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =========================
+                 BUTTONS
+            ========================== -->
+
+            <div class="search-buttons">
+
+                <button
+                    type="submit"
+                    class="search-btn"
+                >
+                    🔍 Search Residence
+                </button>
+
+
+                <a
+                    href="{{ url_for('find_pg') }}"
+                    class="clear-btn"
+                >
+                    Clear
+                </a>
+
+            </div>
+
+
+        </form>
+
+    </section>
+
+    <!-- =========================
+        MAP SEARCH
+    ========================== -->
+
+    <section class="pg-map-section">
+
+        <div class="pg-map-header">
+
+            <div>
+
+                <h2>
+                    🗺️ Residence on Map
+                </h2>
+
+                <p>
+                    Explore available Residence around the selected location.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="find-pg-map"
+            class="find-pg-map"
+        ></div>
+
+    </section>
+
+    <!-- =========================
+         RESULTS
+    ========================== -->
+
+    <section class="pg-results-container">
+
+
+        {% if pgs %}
+
+
+            <div class="results-header">
+
+                <h2>
+                    Residence Listings
+                </h2>
+
+
+                <span>
+
+                    {{ pgs|length }}
+
+                    PG{% if pgs|length != 1 %}s{% endif %}
+
+                    found
+
+                </span>
+
+            </div>
+
+
+
+            <div class="pg-grid">
+
+
+                <!-- IMPORTANT:
+                     pgs now contains result objects,
+                     not direct PG objects.
+                -->
+
+                {% for item in pgs %}
+
+                    {% set pg = item.pg %}
+
+
+                    <div class="pg-card">
+
+                       <!-- =========================
+                            COMPARE PG
+                        ========================== -->
+
+                        <div class="compare-checkbox-container">
+
+                            <label class="compare-checkbox">
+
+                                <input
+                                    type="checkbox"
+                                    class="compare-pg-checkbox"
+                                    value="{{ pg.id }}"
+                                    data-name="{{ pg.name }}"
+                                >
+
+                                <span>
+                                    ⚖️ Compare
+                                </span>
+
+                            </label>
+
+                        </div>
+ 
+                        <!-- =========================
+                            PG FRONT PHOTO
+                        ========================= -->
+
+                        <div class="pg-result-image">
+
+                            {% if pg.front_image %}
+
+                                <img
+                                    src="{{ url_for(
+                                        'static',
+                                        filename='uploads/pg/' + pg.front_image
+                                    ) }}"
+                                    alt="{{ pg.name }} front view"
+                                >
+
+                            {% else %}
+
+                                <div class="pg-result-no-image">
+
+                                    <span>📷</span>
+
+                                    <p>
+                                        No photo available
+                                    </p>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- =========================
+                             PG NAME
+                        ========================== -->
+
+                        <div class="pg-card-header">
+
+                            <h3>
+                                {{ pg.name }}
+                            </h3>
+                            {% if pg.verification_status == "verified" %}
+                                <span class="verified-badge">
+                                    ✓ Verified
+                                </span>
+                            
+                            {% endif %}
+
+
+                            <span class="gender-badge">
+
+                                {{ pg.gender|title }}
+
+                            </span>
+
+                        </div>
+                        <div class="pg-last-updated">
+                            🕒 Last updated: {{ pg.updated_at | ist }} IST
+                        </div>
+
+                        <!-- =========================
+                            RATING
+                        ========================== -->
+
+                        <div class="pg-card-rating">
+
+                            {% if item.average_rating > 0 %}
+
+                                <span class="rating-stars">
+
+                                    {% for i in range(1, 6) %}
+
+                                        {% if i <= item.average_rating|round(0, 'floor') %}
+
+                                            <span class="rating-star filled">
+                                                ★
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="rating-star">
+                                                ★
+                                            </span>
+
+                                        {% endif %}
+
+                                    {% endfor %}
+
+                                </span>
+
+                                <strong>
+                                    {{ item.average_rating }}
+                                </strong>
+
+                                <span class="rating-review-count">
+
+                                    ({{ item.review_count }}
+
+                                    {% if item.review_count == 1 %}
+                                        review
+                                    {% else %}
+                                        reviews
+                                    {% endif %})
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="no-rating">
+                                    No reviews yet
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+                        <!-- =========================
+                             ADDRESS
+                        ========================== -->
+
+                        <div class="pg-address">
+
+                            📍 {{ pg.address }}
+
+                        </div>
+
+
+
+                        <!-- =========================
+                             DISTANCE
+                        ========================== -->
+
+                        {% if item.distance is not none %}
+
+                            <div class="pg-distance">
+
+                                📍 {{ item.distance }} km away
+
+                            </div>
+
+                        {% endif %}
+
+
+
+                        <!-- =========================
+                             ROOM INFORMATION
+                        ========================== -->
+
+                        <div class="pg-info">
+
+
+                            <div class="info-item">
+
+                                <span class="info-icon">
+                                    🛏️
+                                </span>
+
+
+                                <div>
+
+                                    <small>
+                                        Total Rooms/Beds
+                                    </small>
+
+
+                                    <strong>
+                                        {{ pg.total_rooms }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+
+                            <div class="info-item">
+
+                                <span class="info-icon">
+                                    👤
+                                </span>
+
+
+                                <div>
+
+                                    <small>
+                                        Available
+                                    </small>
+
+
+                                    <strong>
+                                        {{ pg.available_rooms }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                        </div>
+
+
+
+                        <!-- =========================
+                             AVAILABILITY
+                        ========================== -->
+
+                        {% if pg.available_rooms > 0 %}
+
+                            <div class="availability available">
+
+                                ✓
+
+                                {{ pg.available_rooms }}
+
+                                rooms/beds available
+
+                            </div>
+
+                        {% else %}
+
+                            <div class="availability full">
+
+                                ✕
+
+                                Currently Full
+
+                            </div>
+
+                        {% endif %}
+
+
+
+                        <!-- =========================
+                             FACILITIES
+                        ========================== -->
+
+                        <div class="facilities">
+
+                            <h4>
+                                Facilities
+                            </h4>
+
+
+                            <div class="facility-list">
+
+
+                                {% if pg.wifi %}
+
+                                    <span class="facility">
+                                        📶 Wi-Fi
+                                    </span>
+
+                                {% endif %}
+
+
+
+                                {% if pg.laundry %}
+
+                                    <span class="facility">
+                                        🧺 Laundry
+                                    </span>
+
+                                {% endif %}
+
+
+
+                                {% if pg.ac %}
+
+                                    <span class="facility">
+                                        ❄️ AC
+                                    </span>
+
+                                {% endif %}
+
+
+
+                                {% if pg.cctv %}
+
+                                    <span class="facility">
+                                        📹 CCTV
+                                    </span>
+
+                                {% endif %}
+
+
+
+                                {% if pg.power_backup %}
+
+                                    <span class="facility">
+                                        🔋 Power Backup
+                                    </span>
+
+                                {% endif %}
+
+
+
+                                {% if not pg.wifi
+                                      and not pg.laundry
+                                      and not pg.ac
+                                      and not pg.cctv
+                                      and not pg.power_backup %}
+
+                                    <span class="facility">
+                                        Basic Facilities
+                                    </span>
+
+                                {% endif %}
+
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- =========================
+                             DESCRIPTION
+                        ========================== -->
+
+                        {% if pg.description %}
+
+                            <div class="pg-description">
+
+                                <h4>
+                                    Description
+                                </h4>
+
+
+                                <p>
+                                    {{ pg.description }}
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+
+
+                        <!-- =========================
+                             CONTACT OWNER
+                        ========================== -->
+
+                        <div class="owner-contact">
+
+                            <h4>
+                                Contact Owner
+                            </h4>
+
+
+                            {% if session.get("user_id")
+                                  and session.get("role") == "student" %}
+
+
+                                <!-- STUDENT LOGGED IN -->
+
+                                <p>
+                                    📞 {{ pg.contact }}
+                                </p>
+
+
+                                <div class="pg-card-buttons">
+
+
+                                    <a
+                                        href="{{ url_for('pg_details', pg_id=pg.id) }}"
+                                        class="view-details-btn"
+                                    >
+                                        View Details
+                                    </a>
+                                    {% if pg.latitude is not none and pg.longitude is not none %}
+
+                                    <button
+                                        type="button"
+                                        class="directions-button"
+                                        data-latitude="{{ pg.latitude }}"
+                                        data-longitude="{{ pg.longitude }}"
+                                    >
+                                        🧭 Get Directions
+                                    </button>
+
+                                    {% endif %}
+
+
+                                    <a
+                                        href="tel:{{ pg.contact }}"
+                                        class="contact-owner-btn"
+                                    >
+                                        📞 Contact Owner
+                                    </a>
+
+
+                                </div>
+
+
+                            {% else %}
+
+
+                                <!-- NOT LOGGED IN / OWNER -->
+
+                                <p class="contact-login-message">
+
+                                    🔒 Login as a student to view
+                                    the owner's contact number.
+
+                                </p>
+
+
+                                <div class="pg-card-buttons">
+
+
+                                    <a
+                                        href="{{ url_for('pg_details', pg_id=pg.id) }}"
+                                        class="view-details-btn"
+                                    >
+                                        View Details
+                                    </a>
+
+                                    {% if pg.latitude is not none and pg.longitude is not none %}
+
+                                    <button
+                                        type="button"
+                                        class="directions-button"
+                                        data-latitude="{{ pg.latitude }}"
+                                        data-longitude="{{ pg.longitude }}"
+                                    >
+                                        🧭 Directions
+                                    </button>
+
+                                    {% endif %}
+
+
+                                    <a
+                                        href="{{ url_for('student_login') }}"
+                                        class="contact-owner-btn"
+                                    >
+                                        🔐 Login to Contact Owner
+                                    </a>
+
+
+                                </div>
+
+
+                            {% endif %}
+
+
+                        </div>
+
+
+                    </div>
+
+
+                {% endfor %}
+
+
+            </div>
+
+
+
+        {% else %}
+
+
+            <!-- =========================
+                 NO RESULTS
+            ========================== -->
+
+            <div class="no-results">
+
+
+                <div class="no-results-icon">
+                    🔍
+                </div>
+
+
+                <h2>
+                    No PGs Found
+                </h2>
+
+
+                <p>
+                    We couldn't find any PG matching your search.
+                </p>
+
+
+                <a
+                    href="{{ url_for('find_pg') }}"
+                    class="clear-search-btn"
+                >
+                    Clear Search
+                </a>
+
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+    <!-- =========================
+        COMPARE BAR
+    ========================= -->
+
+    <div
+        id="compare-bar"
+        class="compare-bar"
+    >
+
+        <div class="compare-info">
+
+            <strong>
+                ⚖️ Compare PGs
+            </strong>
+
+            <span id="compare-count">
+                0 PGs selected
+            </span>
+
+        </div>
+
+
+        <div class="compare-actions">
+
+            <button
+                type="button"
+                id="clear-compare-btn"
+                class="clear-compare-btn"
+            >
+                Clear
+            </button>
+
+
+            <button
+                type="button"
+                id="compare-now-btn"
+                class="compare-now-btn"
+                disabled
+            >
+                Compare
+            </button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================
+         JAVASCRIPT
+    ========================== -->
+
+    <script src="{{ url_for('static', filename='js/find_pg.js') }}"></script>
+    
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <div
+        id="pg-map-data"
+        data-pgs='{{ map_pgs | tojson | forceescape }}'
+        data-user-latitude="{{ user_latitude if user_latitude is not none else '' }}"
+        data-user-longitude="{{ user_longitude if user_longitude is not none else '' }}">
+    </div>
+
+    <script src="{{ url_for('static', filename='js/find_pg_map.js') }}"></script>
+
+</body>
+
+</html>

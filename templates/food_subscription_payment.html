@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Subscription Payment</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/subscription_payment.css') }}">
+</head>
+<body>
+<main class="subscription-payment-container">
+    <a href="{{ url_for('food_owner_dashboard') }}">← Back to owner dashboard</a>
+    <h1>Renew subscription</h1>
+    <h2>{{ business.business_name }}</h2>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}<div class="payment-flashes">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <section class="plan-grid">
+      {% for key, item in plans.items() %}
+        <a class="plan-card {% if selected_plan == key %}selected{% endif %}" href="{{ url_for('food_business_renewal', business_id=business.id, plan=key) }}">
+          <h3>{{ item.label }}</h3><strong>₹{{ item.amount }}</strong><span>{{ item.days }} days</span>
+        </a>
+      {% endfor %}
+    </section>
+
+    {% if plan %}
+      <section class="payment-panel">
+        <h2>Pay ₹{{ plan.amount }} for the {{ plan.label }} plan</h2>
+        <p>UPI ID: <strong>{{ '8278660320-2@ybl' }}</strong></p>
+        {% if qr_image %}<img class="payment-qr" src="{{ qr_image }}" alt="UPI QR code for ₹{{ plan.amount }}">{% else %}<p>QR generation is unavailable. Install the qrcode package as shown in the setup instructions.</p>{% endif %}
+        <p>Scan the QR using your UPI app. Confirm that the amount is exactly ₹{{ plan.amount }} before paying.</p>
+        {% if payment_uri %}<p><a class="upi-pay-link" href="{{ payment_uri }}">Open UPI app</a></p>{% endif %}
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('food_business_renewal', business_id=business.id, plan=selected_plan) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="plan" value="{{ selected_plan }}">
+          <label for="transaction_reference">Transaction reference / UTR *</label>
+          <input id="transaction_reference" name="transaction_reference" minlength="6" maxlength="100" pattern="[A-Za-z0-9-]{6,100}" required autocomplete="off" placeholder="Enter UPI transaction reference">
+          <label for="payment_screenshot">Payment screenshot (optional, max 5 MB)</label>
+          <input id="payment_screenshot" type="file" name="payment_screenshot" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+          <button type="submit" class="approve-btn">Submit payment for verification</button>
+        </form>
+        <p class="payment-warning">Your subscription will not activate immediately. Admin will verify the payment in the UPI account first. Do not submit a transaction reference for a payment you have not made.</p>
+      </section>
+    {% else %}
+      <p>Select a plan above to display its exact-amount UPI QR code.</p>
+    {% endif %}
+
+    {% if payment_requests %}
+      <section class="payment-history"><h2>Payment request history</h2>
+      {% for item in payment_requests %}<div class="payment-history-row"><span>{{ item.plan|capitalize }} — ₹{{ item.amount }}</span><span class="payment-status {{ item.status }}">{{ item.status|capitalize }}</span><small>{{ item.created_at.strftime('%d-%m-%Y %H:%M') }}</small>{% if item.admin_note %}<p>{{ item.admin_note }}</p>{% endif %}</div>{% endfor %}
+      </section>
+    {% endif %}
+</main>
+</body>
+</html>

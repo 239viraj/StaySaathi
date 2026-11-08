@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header>
+
+        <div class="logo">
+
+            <a href="{{ url_for('home') }}">
+                StaySaathi
+            </a>
+
+        </div>
+
+
+        <nav>
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+
+            <a href="{{ url_for('find_pg') }}">
+                Find Residence
+            </a>
+
+
+            <a href="{{ url_for('about') }}">
+                About
+            </a>
+
+
+            <form action="{{ url_for('logout') }}" method="POST" class="logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+
+        </nav>
+
+    </header>
+
+
+
+    <!-- =========================
+         STUDENT DASHBOARD
+    ========================== -->
+
+    <main class="dashboard">
+
+        <h1>
+            Welcome, {{ name }}!
+        </h1>
+
+
+        <p>
+            Find PGs near your college or preferred location.
+        </p>
+
+
+
+        <!-- =========================
+             DASHBOARD ACTIONS
+        ========================== -->
+
+        <div class="dashboard-actions">
+
+
+            <!-- FIND PG -->
+
+            <a href="{{ url_for('find_pg') }}"
+               class="dashboard-action-link">
+
+                <button type="button">
+                    🔍 Find PGs
+                </button>
+
+            </a>
+
+
+
+            <!-- NEARBY PGs -->
+
+            <a href="{{ url_for('nearby_pgs') }}"
+               class="dashboard-action-link">
+
+                <button type="button">
+                    📍 Nearby PGs
+                </button>
+
+            </a>
+
+
+
+            <!-- SAVED PGs -->
+
+            <a href="{{ url_for('saved_pgs') }}"
+               class="dashboard-action-link">
+
+                <button type="button">
+                    ❤️ Saved PGs
+                </button>
+
+            </a>
+
+
+        </div>
+
+    </main>
+
+
+</body>
+
+</html>

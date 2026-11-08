@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Saved PGs - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+    <!-- =========================
+         NAVBAR
+    ========================== -->
+
+    <nav class="navbar">
+
+        <div class="nav-logo">
+            StaySaathi
+        </div>
+
+        <div class="nav-links">
+
+            <a href="{{ url_for('student_dashboard') }}">
+                Dashboard
+            </a>
+
+            <a href="{{ url_for('find_pg') }}">
+                Find Residence
+            </a>
+
+            <a href="{{ url_for('saved_pgs') }}">
+                Saved PGs
+            </a>
+
+            <a href="{{ url_for('about') }}">
+                About
+            </a>
+
+            <form action="{{ url_for('logout') }}" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+
+        </div>
+
+    </nav>
+
+
+    <!-- =========================
+         SAVED PG PAGE
+    ========================== -->
+
+    <main class="saved-pgs-page">
+
+        <div class="saved-pgs-container">
+
+            <!-- PAGE HEADER -->
+
+            <div class="saved-pgs-header">
+
+                <h1>
+                    ❤️ Saved PGs
+                </h1>
+
+                <p>
+                    PGs that you saved for later.
+                </p>
+
+            </div>
+
+
+            <!-- =========================
+                 LOCATION SECTION
+            ========================== -->
+
+            <div class="saved-location-card">
+
+                <h3>
+                    📍 Find Distance From You
+                </h3>
+
+                <p id="saved-location-status">
+
+                    {% if user_latitude is not none
+                          and user_longitude is not none %}
+
+                        ✓ Your location is being used to calculate
+                        PG distances.
+
+                    {% else %}
+
+                        Use your current location to see how far
+                        each saved PG is.
+
+                    {% endif %}
+
+                </p>
+
+
+                <button
+                    type="button"
+                    id="saved-location-button"
+                    onclick="getSavedPGLocation()"
+                >
+
+                    {% if user_latitude is not none
+                          and user_longitude is not none %}
+
+                        📍 Update My Location
+
+                    {% else %}
+
+                        📍 Use My Location
+
+                    {% endif %}
+
+                </button>
+
+            </div>
+
+
+            <!-- =========================
+                 FLASH MESSAGES
+            ========================== -->
+
+            {% with messages = get_flashed_messages() %}
+
+                {% if messages %}
+
+                    <div class="flash-messages">
+
+                        {% for message in messages %}
+
+                            <div class="flash-message">
+                                {{ message }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <!-- =========================
+                 NO SAVED PGs
+            ========================== -->
+
+            {% if not pgs %}
+
+                <div class="no-saved-pgs">
+
+                    <div class="no-saved-icon">
+                        ❤️
+                    </div>
+
+                    <h2>
+                        No Saved PGs
+                    </h2>
+
+                    <p>
+                        You haven't saved any PGs yet.
+                    </p>
+
+                    <a href="{{ url_for('find_pg') }}"
+                       class="find-pg-btn">
+
+                        Find PGs
+
+                    </a>
+
+                </div>
+
+
+            <!-- =========================
+                 SAVED PG LIST
+            ========================== -->
+
+            {% else %}
+
+                <div class="saved-pg-grid">
+
+                    {% for item in pgs %}
+
+                        <!--
+                            item is a dictionary:
+                            {
+                                "pg": PG object,
+                                "distance": distance
+                            }
+
+                            So we extract the actual PG object here.
+                        -->
+
+                        {% set pg = item.pg %}
+
+
+                        <div class="saved-pg-card">
+
+
+                            <!-- =========================
+                                 PG PHOTO
+                            ========================== -->
+
+                            <div class="saved-pg-image">
+
+                                {% if pg.front_image %}
+
+                                    <img
+                                        src="{{ url_for(
+                                            'static',
+                                            filename='uploads/pg/' + pg.front_image
+                                        ) }}"
+                                        alt="{{ pg.name }} front view"
+                                    >
+
+                                {% else %}
+
+                                    <div class="saved-pg-no-image">
+
+                                        <span>
+                                            📷
+                                        </span>
+
+                                        <p>
+                                            No photo available
+                                        </p>
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- =========================
+                                 PG HEADER
+                            ========================== -->
+
+                            <div class="saved-pg-header">
+
+                                <h2>
+                                    {{ pg.name }}
+                                </h2>
+
+                                <span class="gender-badge">
+                                    {{ pg.gender|title }}
+                                </span>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 ADDRESS
+                            ========================== -->
+
+                            <p class="saved-pg-address">
+
+                                📍 {{ pg.address }}
+
+                            </p>
+
+
+                            <!-- =========================
+                                 DISTANCE
+                            ========================== -->
+
+                            {% if item.distance is not none %}
+
+                                <div class="saved-pg-distance">
+
+                                    📏
+                                    {{ item.distance }}
+                                    km away
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="saved-pg-distance no-distance">
+
+                                    📍 Use My Location to calculate
+                                    distance
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- =========================
+                                 PG INFORMATION
+                            ========================== -->
+
+                            <div class="saved-pg-info">
+
+                                <div>
+
+                                    <span>
+                                        🛏️ Total Rooms/Beds
+                                    </span>
+
+                                    <strong>
+                                        {{ pg.total_rooms }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div>
+
+                                    <span>
+                                        🟢 Available
+                                    </span>
+
+                                    <strong>
+                                        {{ pg.available_rooms }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =========================
+                                 AVAILABILITY
+                            ========================== -->
+
+                            {% if pg.available_rooms > 0 %}
+
+                                <div class="availability available-status">
+
+                                    ✓ Currently Available
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="availability unavailable-status">
+
+                                    ✕ Currently Full
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- =========================
+                                 FACILITIES
+                            ========================== -->
+
+                            <div class="saved-pg-facilities">
+
+                                {% if pg.wifi %}
+
+                                    <span>
+                                        📶 Wi-Fi
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.laundry %}
+
+                                    <span>
+                                        🧺 Laundry
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.ac %}
+
+                                    <span>
+                                        ❄️ AC
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.cctv %}
+
+                                    <span>
+                                        📹 CCTV
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.power_backup %}
+
+                                    <span>
+                                        🔋 Power Backup
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- =========================
+                                 DESCRIPTION
+                            ========================== -->
+
+                            {% if pg.description %}
+
+                                <p class="saved-pg-description">
+
+                                    {{ pg.description }}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- =========================
+                                 ACTIONS
+                            ========================== -->
+
+                            <div class="saved-pg-actions">
+
+                                <!-- VIEW DETAILS -->
+
+                                <a
+                                    href="{{ url_for(
+                                        'pg_details',
+                                        pg_id=pg.id
+                                    ) }}"
+                                    class="view-pg-btn"
+                                >
+
+                                    View Details
+
+                                </a>
+
+
+                                <!-- REMOVE -->
+
+                                <form
+                                    action="{{ url_for(
+                                        'remove_saved_pg',
+                                        pg_id=pg.id
+                                    ) }}"
+                                    method="POST"
+                                >
+                                    
+                                    <!-- CSRF Protection -->
+                                    <input type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}">
+
+
+                                    <button
+                                        type="submit"
+                                        class="remove-pg-btn"
+                                    >
+
+                                        Remove
+
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         SAVED PG JAVASCRIPT
+    ========================== -->
+
+    <script
+        src="{{ url_for(
+            'static',
+            filename='js/saved_pgs.js'
+        ) }}">
+    </script>
+
+</body>
+
+</html>

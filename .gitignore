@@ -1,0 +1,64 @@
+# =================================
+# ENVIRONMENT VARIABLES AND SECRETS
+# =================================
+
+.env
+.env.*
+!.env.example
+
+# =================================
+# PYTHON
+# =================================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# =================================
+# DATABASE
+# =================================
+
+*.db
+*.sqlite
+*.sqlite3
+
+# =================================
+# FLASK
+# =================================
+
+instance/
+
+# =================================
+# UPLOADED USER FILES
+# =================================
+
+static/uploads/*
+!static/uploads/.gitkeep
+!static/uploads/pg/
+!static/uploads/food_menus/
+
+static/uploads/pg/*
+static/uploads/food_menus/*
+
+# =================================
+# IDE AND SYSTEM FILES
+# =================================
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =================================
+# LOG FILES
+# =================================
+
+*.log
+
+# Private user uploads
+private_uploads/

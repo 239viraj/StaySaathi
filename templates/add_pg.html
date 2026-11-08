@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Add PG - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        <a href="{{ url_for('home') }}">
+            StaySaathi
+        </a>
+    </div>
+
+    <nav>
+
+        <a href="{{ url_for('home') }}">
+            Home
+        </a>
+
+        <a href="{{ url_for('find_pg') }}">
+            Find PG
+        </a>
+
+        <a href="{{ url_for('about') }}">
+            About
+        </a>
+
+        <a href="{{ url_for('owner_dashboard') }}">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('logout') }}">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+    <div class="auth-container">
+
+        <div class="auth-box">
+
+            <h1>Add Your Residence</h1>
+
+            <p>
+                Enter the basic information about your Residence.
+            </p>
+
+
+            <!-- =========================
+                 FLASH MESSAGES
+            ========================== -->
+
+            {% with messages = get_flashed_messages() %}
+
+                {% if messages %}
+
+                    <div class="flash-message">
+
+                        {% for message in messages %}
+
+                            {{ message }}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            {% endwith %}
+
+
+
+            <!-- =========================
+                 ADD PG FORM
+            ========================== -->
+
+            <form method="POST"
+                  action="{{ url_for('add_pg') }}"
+                  enctype="multipart/form-data">
+
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+                <!-- =========================
+                     PG NAME
+                ========================== -->
+
+                <label for="name">
+                    Residence Name
+                </label>
+
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Enter Residence name"
+                    required
+                >
+
+
+
+                <!-- =========================
+                     FRONT VIEW PHOTO
+                ========================== -->
+
+                <div class="front-photo-section">
+
+                    <h3>
+                        📸 Front View of Residence
+                    </h3>
+
+                    <p>
+                        Upload a clear photo of the Residence
+                        from the front.
+                    </p>
+
+                    <p class="photo-note">
+                        This photo will be shown to students/customers
+                        on the PG details page.
+                    </p>
+
+
+                    <label for="front_image"
+                           class="photo-upload-label">
+
+                        Choose Front View Photo
+
+                    </label>
+
+                    <input
+                        type="file"
+                        id="front_image"
+                        name="front_image"
+                        accept=".jpg,.jpeg,.png,.webp"
+                    >
+
+
+                    <!-- Image preview -->
+
+                    <div id="front-image-preview"
+                         class="front-image-preview">
+
+                        <p>
+                            No photo selected.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- =========================
+                     ADDRESS
+                ========================== -->
+
+                <label for="address">
+                    Address / Location
+                </label>
+
+                <textarea
+                    id="address"
+                    name="address"
+                    placeholder="Enter complete PG address, city, state and PIN code"
+                    rows="4"
+                    required
+                ></textarea>
+
+
+
+                <!-- =========================
+                     PG LOCATION
+                ========================== -->
+
+                <div class="location-section">
+
+                    <h3>
+                        📍 Residence Location
+                    </h3>
+
+                    <p>
+                        Please fill this form while you are
+                        physically inside the Residence.
+                    </p>
+
+                    <p>
+                        Your current location will be used
+                        as the Residence's location for Nearby PGs.
+                    </p>
+
+
+                    <button
+                        type="button"
+                        id="location-button"
+                        onclick="getPGLocation()">
+
+                        📍 I'm at the PG - Get My Location
+
+                    </button>
+
+
+                    <p
+                        id="location-status"
+                        class="location-status">
+
+                        Location not captured yet.
+
+                    </p>
+
+
+                    <!-- Hidden latitude -->
+
+                    <input
+                        type="hidden"
+                        id="latitude"
+                        name="latitude"
+                    >
+
+
+                    <!-- Hidden longitude -->
+
+                    <input
+                        type="hidden"
+                        id="longitude"
+                        name="longitude"
+                    >
+
+                </div>
+
+
+
+                <!-- =========================
+                     GENDER
+                ========================== -->
+
+                <label for="gender">
+                    PG For
+                </label>
+
+                <select
+                    id="gender"
+                    name="gender"
+                    required
+                >
+
+                    <option value="">
+                        Select
+                    </option>
+
+                    <option value="boys">
+                        Boys
+                    </option>
+
+                    <option value="girls">
+                        Girls
+                    </option>
+
+                    <option value="unisex">
+                        Unisex
+                    </option>
+
+                </select>
+
+
+
+                <!-- =========================
+                     TOTAL ROOMS
+                ========================== -->
+
+                <label for="total_rooms">
+                    Total Rooms / Beds
+                </label>
+
+                <input
+                    type="number"
+                    id="total_rooms"
+                    name="total_rooms"
+                    min="1"
+                    placeholder="Example: 20"
+                    required
+                >
+
+
+
+                <!-- =========================
+                     AVAILABLE ROOMS
+                ========================== -->
+
+                <label for="available_rooms">
+                    Available Rooms / Beds
+                </label>
+
+                <input
+                    type="number"
+                    id="available_rooms"
+                    name="available_rooms"
+                    min="0"
+                    placeholder="Example: 5"
+                    required
+                >
+
+
+
+                <!-- =========================
+                     FACILITIES
+                ========================== -->
+
+                <label>
+                    Facilities
+                </label>
+
+                <div class="checkbox-group">
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            name="wifi"
+                        >
+
+                        Wi-Fi
+
+                    </label>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            name="laundry"
+                        >
+
+                        Laundry
+
+                    </label>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            name="ac"
+                        >
+
+                        AC
+
+                    </label>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            name="cctv"
+                        >
+
+                        CCTV
+
+                    </label>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            name="power_backup"
+                        >
+
+                        Power Backup
+
+                    </label>
+
+                </div>
+
+
+
+                <!-- =========================
+                     DESCRIPTION
+                ========================== -->
+
+                <label for="description">
+                    Description
+                </label>
+
+                <textarea
+                    id="description"
+                    name="description"
+                    placeholder="Tell students about your PG"
+                    rows="5"
+                ></textarea>
+
+
+
+                <!-- =========================
+                     CONTACT
+                ========================== -->
+
+                <label for="contact">
+                    Contact Number
+                </label>
+
+                <input
+                    type="tel"
+                    id="contact"
+                    name="contact"
+                    placeholder="Enter contact number"
+                    required
+                >
+
+
+
+                <!-- =========================
+                     SUBMIT
+                ========================== -->
+
+                <button
+                    type="submit"
+                    id="submit-button">
+
+                    Add PG
+
+                </button>
+
+            </form>
+
+
+            <!-- =========================
+                 BACK TO DASHBOARD
+            ========================== -->
+
+            <p>
+
+                <a href="{{ url_for('owner_dashboard') }}">
+                    ← Back to Dashboard
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<!-- =========================
+     JAVASCRIPT
+========================== -->
+
+<script src="{{ url_for('static', filename='js/add_pg.js') }}"></script>
+
+
+<!-- =========================
+     FRONT IMAGE PREVIEW
+========================== -->
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const imageInput =
+            document.getElementById("front_image");
+
+        const preview =
+            document.getElementById("front-image-preview");
+
+
+        if (!imageInput || !preview) {
+            return;
+        }
+
+
+        imageInput.addEventListener(
+            "change",
+            function () {
+
+                const file =
+                    imageInput.files[0];
+
+
+                if (!file) {
+
+                    preview.innerHTML =
+                        "<p>No photo selected.</p>";
+
+                    return;
+                }
+
+
+                const allowedTypes = [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp"
+                ];
+
+
+                if (
+                    !allowedTypes.includes(
+                        file.type
+                    )
+                ) {
+
+                    preview.innerHTML =
+                        "<p>❌ Please select a JPG, PNG or WEBP image.</p>";
+
+                    imageInput.value = "";
+
+                    return;
+                }
+
+
+                if (
+                    file.size > 5 * 1024 * 1024
+                ) {
+
+                    preview.innerHTML =
+                        "<p>❌ Image must be smaller than 5 MB.</p>";
+
+                    imageInput.value = "";
+
+                    return;
+                }
+
+
+                const imageURL =
+                    URL.createObjectURL(file);
+
+
+                preview.innerHTML = `
+
+                    <img
+                        src="${imageURL}"
+                        alt="PG front view preview"
+                        class="front-image-preview-img"
+                    >
+
+                    <p class="photo-selected">
+                        ✓ Photo selected
+                    </p>
+
+                `;
+
+            }
+        );
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

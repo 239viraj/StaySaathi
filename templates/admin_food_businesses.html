@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Manage Food Businesses</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/subscription_payment.css') }}">
+</head>
+
+<body>
+
+<div class="admin-food-container">
+
+    <h1>Manage Food Businesses</h1>
+
+    <a href="{{ url_for('admin_dashboard') }}">
+        Back to Admin Dashboard
+    </a>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="flash-message">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <section class="payment-review-section">
+        <h2>Subscription Payment Requests</h2>
+        <p>Check the transaction in your UPI account before approving. A UTR or screenshot alone is not proof of payment.</p>
+        {% set pending_count = payment_requests|selectattr('status', 'equalto', 'pending')|list|length %}
+        {% if payment_requests %}
+            {% for payment in payment_requests %}
+                <article class="payment-request-card">
+                    <h3>{{ payment.business.business_name }} — {{ payment.plan|capitalize }}</h3>
+                    <p><strong>Amount:</strong> ₹{{ payment.amount }}</p>
+                    <p><strong>Owner:</strong> {{ payment.owner.name }} ({{ payment.owner.email }})</p>
+                    <p><strong>UTR / Transaction reference:</strong> {{ payment.transaction_reference }}</p>
+                    <p><strong>Submitted:</strong> {{ payment.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+                    <p><strong>Status:</strong> <span class="payment-status {{ payment.status }}">{{ payment.status|capitalize }}</span></p>
+                    {% if payment.proof_image %}
+                        <p>
+                            <a href="{{ url_for('view_payment_proof', payment_id=payment.id) }}"
+                            target="_blank"
+                            rel="noopener">
+                                View payment screenshot
+                            </a>
+                        </p>
+                    {% endif %}
+                    {% if payment.admin_note %}<p><strong>Admin note:</strong> {{ payment.admin_note }}</p>{% endif %}
+                    {% if payment.status == 'pending' %}
+                        <form method="POST" action="{{ url_for('review_food_subscription_payment', payment_id=payment.id) }}" class="payment-review-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <label for="note-{{ payment.id }}">Admin note (optional)</label>
+                            <input id="note-{{ payment.id }}" name="admin_note" maxlength="500" placeholder="e.g. UPI payment verified">
+                            <button type="submit" name="action" value="approve" class="approve-btn" onclick="return confirm('Confirm you verified this payment in your UPI account?');">Approve & Activate / Extend</button>
+                            <button type="submit" name="action" value="reject" class="reject-btn" onclick="return confirm('Reject this payment request? Existing subscription will remain unchanged.');">Reject Payment</button>
+                        </form>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        {% else %}
+            <p>No subscription payment requests yet.</p>
+        {% endif %}
+    </section>
+
+    {% if businesses %}
+
+        <div class="admin-food-grid">
+
+            {% for business in businesses %}
+
+                <div class="admin-food-card">
+
+                    <h2>{{ business.business_name }}</h2>
+
+                    <!-- MENU PHOTOS -->
+                    {% if business.display_menu_photos %}
+
+                        <div class="admin-menu-gallery">
+
+                            {% for photo in business.display_menu_photos %}
+
+                                <img
+                                    src="{{ url_for('static', filename=photo) }}"
+                                    alt="Menu photo for {{ business.business_name }}"
+                                    loading="lazy"
+                                >
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <p class="no-menu-photos">
+                            No menu photos uploaded.
+                        </p>
+
+                    {% endif %}
+
+                    <!-- BUSINESS DETAILS -->
+                    <p>
+                        <strong>Category:</strong>
+                        {{ business.category }}
+                    </p>
+
+                    <p>
+                        <strong>Address:</strong>
+                        {{ business.address }}
+                    </p>
+
+                    <p>
+                        <strong>Phone:</strong>
+                        {{ business.phone }}
+                    </p>
+
+                    <p>
+                        <strong>Description:</strong>
+                        {{ business.description or "Not provided" }}
+                    </p>
+
+                    <!-- VERIFICATION STATUS -->
+                    <p>
+                        <strong>Verification:</strong>
+                        {{ business.verification_status|capitalize }}
+                    </p>
+
+                    <!-- SUBSCRIPTION DETAILS -->
+                    <p>
+                        <strong>Subscription Status:</strong>
+                        {{ business.subscription_status|capitalize }}
+                    </p>
+
+                    <p>
+                        <strong>Subscription Plan:</strong>
+
+                        {% if business.subscription_plan %}
+                            {{ business.subscription_plan|capitalize }}
+                        {% else %}
+                            Not selected
+                        {% endif %}
+                    </p>
+
+                    <p>
+                        <strong>Start Date:</strong>
+
+                        {% if business.subscription_start_date %}
+                            {{ business.subscription_start_date.strftime('%d-%m-%Y') }}
+                        {% else %}
+                            Not started
+                        {% endif %}
+                    </p>
+
+                    <p>
+                        <strong>Expiry Date:</strong>
+
+                        {% if business.subscription_expiry_date %}
+                            {{ business.subscription_expiry_date.strftime('%d-%m-%Y') }}
+                        {% else %}
+                            Not set
+                        {% endif %}
+                    </p>
+
+                    <!-- SUBSCRIPTION PLAN AND ACTIVATION -->
+                    <div class="admin-food-actions">
+
+                        <p class="payment-admin-note">Activation and renewal are processed only after approving a verified payment request above.</p>
+
+                        <!-- DEACTIVATE SUBSCRIPTION -->
+                        {% if business.subscription_status == "active" %}
+
+                            <form
+                                method="POST"
+                                action="{{ url_for(
+                                    'update_food_business_subscription',
+                                    business_id=business.id
+                                ) }}"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="deactivate"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="reject-btn"
+                                >
+                                    Deactivate Subscription
+                                </button>
+
+                            </form>
+
+                        {% endif %}
+
+                    </div>
+
+                    <!-- BUSINESS VERIFICATION ACTIONS -->
+                    <div class="admin-food-actions">
+
+                        <!-- APPROVE BUSINESS -->
+                        <form
+                            method="POST"
+                            action="{{ url_for(
+                                'update_food_business_verification',
+                                business_id=business.id
+                            ) }}"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="approve"
+                            >
+
+                            <button
+                                type="submit"
+                                class="approve-btn"
+                            >
+                                Approve Business
+                            </button>
+
+                        </form>
+
+                        <!-- REJECT BUSINESS -->
+                        <form
+                            method="POST"
+                            action="{{ url_for(
+                                'update_food_business_verification',
+                                business_id=business.id
+                            ) }}"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="reject"
+                            >
+
+                            <button
+                                type="submit"
+                                class="reject-btn"
+                            >
+                                Reject Business
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <p>No food businesses have been registered yet.</p>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
+

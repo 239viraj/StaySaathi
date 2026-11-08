@@ -1,0 +1,426 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Food Finder | PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <main class="food-finder-page">
+
+        <!-- Page Header -->
+        <section class="food-finder-header">
+
+            <h1>Discover Food Near You 🍲</h1>
+
+            <p>
+                Find restaurants, dhabas, food stalls, and tiffin services
+                near your college or accommodation.
+            </p>
+
+        </section>
+
+        <!-- Search Section -->
+        <section class="food-search-section">
+
+            <form method="GET"
+                  action="{{ url_for('food_finder') }}"
+                  class="food-search-form">
+
+                <!-- Location Search -->
+                <input
+                    type="text"
+                    name="location"
+                    placeholder="Search by location..."
+                    value="{{ search_location }}"
+                >
+
+                <!-- Category Filter -->
+                <select name="category">
+
+                    <option value="">All Categories</option>
+
+                    <option value="dhaba"
+                        {% if selected_category == 'dhaba' %}selected{% endif %}>
+                        Dhaba
+                    </option>
+
+                    <option value="restaurant"
+                        {% if selected_category == 'restaurant' %}selected{% endif %}>
+                        Restaurant
+                    </option>
+
+                    <option value="food_stall"
+                        {% if selected_category == 'food_stall' %}selected{% endif %}>
+                        Food Stall
+                    </option>
+
+                    <option value="tiffin_service"
+                        {% if selected_category == 'tiffin_service' %}selected{% endif %}>
+                        Tiffin Service
+                    </option>
+
+                </select>
+
+                <!-- User Coordinates -->
+                <input
+                    type="hidden"
+                    name="latitude"
+                    id="user-latitude"
+                    value="{{ user_latitude if user_latitude is not none else '' }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="longitude"
+                    id="user-longitude"
+                    value="{{ user_longitude if user_longitude is not none else '' }}"
+                >
+
+                <!-- Distance Filter -->
+                <select name="radius" id="radius-filter">
+
+                    <option value="">Any distance</option>
+
+                    <option value="2"
+                        {% if selected_radius == 2 %}selected{% endif %}>
+                        Within 2 km
+                    </option>
+
+                    <option value="5"
+                        {% if selected_radius == 5 %}selected{% endif %}>
+                        Within 5 km
+                    </option>
+
+                    <option value="10"
+                        {% if selected_radius == 10 %}selected{% endif %}>
+                        Within 10 km
+                    </option>
+
+                </select>
+
+                <!-- Location Button -->
+                <button type="button"
+                        id="use-my-location">
+                    📍 Use My Location
+                </button>
+
+                <button type="submit">
+                    Search Food
+                </button>
+
+            </form>
+
+            <p id="location-message" role="status" aria-live="polite"></p>
+
+        </section>
+
+        <!-- Food Business Listings -->
+        <section class="food-business-list">
+
+            {% if businesses %}
+
+                <div class="food-business-grid">
+
+                    {% for business in businesses %}
+
+                        <article class="food-business-card">
+
+                            <!-- Menu Photos -->
+                            {% if business.display_menu_photos %}
+
+                                <div class="food-menu-gallery">
+
+                                    {% for photo_path in business.display_menu_photos %}
+
+                                        <a
+                                            href="{{ url_for('static', filename=photo_path) }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="food-menu-photo-link"
+                                        >
+                                            <img
+                                                src="{{ url_for('static', filename=photo_path) }}"
+                                                alt="Menu photo for {{ business.business_name }}"
+                                                class="food-menu-photo"
+                                                loading="lazy"
+                                            >
+                                        </a>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            {% else %}
+
+                                <p class="no-menu-photos">
+                                    No menu photos available.
+                                </p>
+
+                            {% endif %}
+
+                            <!-- Business Information -->
+                            <div class="food-business-content">
+
+                                <h2>{{ business.business_name }}</h2>
+
+                                <!-- Distance -->
+                                {% if business.distance_km is not none %}
+
+                                    <p class="food-distance">
+
+                                        📍
+
+                                        {% if business.distance_km < 1 %}
+
+                                            {{ (business.distance_km * 1000) | round | int }} m away
+
+                                        {% else %}
+
+                                            {{ business.distance_km | round(2) }} km away
+
+                                        {% endif %}
+
+                                    </p>
+
+                                {% endif %}
+
+                                <p class="food-category">
+                                    {{ business.category | replace('_', ' ') | title }}
+                                </p>
+
+                                {% if business.description %}
+
+                                    <p>{{ business.description }}</p>
+
+                                {% endif %}
+
+                                <p>
+                                    <strong>Address:</strong>
+                                    {{ business.address }}
+                                </p>
+
+                                <p>
+                                    <strong>Contact:</strong>
+                                    {{ business.phone }}
+                                </p>
+
+                                {% if business.opening_hours %}
+
+                                    <p>
+                                        <strong>Opening Hours:</strong>
+                                        {{ business.opening_hours }}
+                                    </p>
+
+                                {% endif %}
+
+                                <!-- Directions -->
+                                {% if business.latitude is not none
+                                      and business.longitude is not none %}
+
+                                    <button
+                                        type="button"
+                                        class="food-directions-btn"
+                                        data-latitude="{{ business.latitude }}"
+                                        data-longitude="{{ business.longitude }}"
+                                        onclick="getDirections(this)"
+                                    >
+                                        Get Directions
+                                    </button>
+
+                                {% endif %}
+
+                            </div>
+
+                        </article>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <!-- Empty State -->
+                <div class="food-empty-state">
+
+                    <h2>No Food Businesses Found</h2>
+
+                    <p>
+                        There are currently no verified food businesses
+                        with active subscriptions matching your search.
+                    </p>
+
+                    <p>
+                        Try another location, increase the distance radius,
+                        or select a different category.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+    </main>
+
+    <!-- Get Directions: request the user's current location when clicked -->
+    <script>
+        function getDirections(button) {
+            const destinationLat = button.dataset.latitude;
+            const destinationLon = button.dataset.longitude;
+
+            if (!destinationLat || !destinationLon) {
+                alert("Directions are unavailable because this business has no location coordinates.");
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                alert("Your browser does not support location access.");
+                return;
+            }
+
+            const originalText = button.textContent.trim();
+            button.disabled = true;
+            button.textContent = "Getting location...";
+
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const origin =
+                        position.coords.latitude + "," +
+                        position.coords.longitude;
+                    const destination = destinationLat + "," + destinationLon;
+
+                    const mapsUrl =
+                        "https://www.google.com/maps/dir/?api=1" +
+                        "&origin=" + encodeURIComponent(origin) +
+                        "&destination=" + encodeURIComponent(destination) +
+                        "&travelmode=driving";
+
+                    button.disabled = false;
+                    button.textContent = originalText;
+                    window.open(mapsUrl, "_blank", "noopener,noreferrer");
+                },
+                function (error) {
+                    button.disabled = false;
+                    button.textContent = originalText;
+
+                    if (error.code === error.PERMISSION_DENIED) {
+                        alert(
+                            "Location permission was denied. Please allow location access " +
+                            "in your browser/site settings, then click Get Directions again."
+                        );
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        alert("Your current location is unavailable. Please try again.");
+                    } else if (error.code === error.TIMEOUT) {
+                        alert("The location request timed out. Please try again.");
+                    } else {
+                        alert("Unable to get your location. Please try again.");
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        }
+    </script>
+
+    <!-- Browser Geolocation for the existing Use My Location search feature -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const locationButton =
+                document.getElementById("use-my-location");
+
+            const latitudeInput =
+                document.getElementById("user-latitude");
+
+            const longitudeInput =
+                document.getElementById("user-longitude");
+
+            const locationMessage =
+                document.getElementById("location-message");
+
+            const searchForm = locationButton.closest("form");
+
+            locationButton.addEventListener("click", function () {
+
+                if (!navigator.geolocation) {
+
+                    locationMessage.textContent =
+                        "Your browser does not support location detection.";
+
+                    return;
+                }
+
+                locationButton.disabled = true;
+                locationButton.textContent = "Getting location...";
+
+                locationMessage.textContent =
+                    "Please allow location access in your browser.";
+
+                navigator.geolocation.getCurrentPosition(
+
+                    function (position) {
+
+                        latitudeInput.value =
+                            position.coords.latitude;
+
+                        longitudeInput.value =
+                            position.coords.longitude;
+
+                        locationMessage.textContent =
+                            "Location detected. Finding nearby businesses...";
+
+                        locationButton.textContent =
+                            "📍 Location Detected";
+
+                        // Preserve the existing location and category filters.
+                        searchForm.requestSubmit();
+                    },
+
+                    function (error) {
+
+                        locationButton.disabled = false;
+                        locationButton.textContent =
+                            "📍 Use My Location";
+
+                        if (error.code === error.PERMISSION_DENIED) {
+
+                            locationMessage.textContent =
+                                "Location permission was denied. Allow location access and try again.";
+
+                        } else if (error.code === error.TIMEOUT) {
+
+                            locationMessage.textContent =
+                                "Location request timed out. Please try again.";
+
+                        } else {
+
+                            locationMessage.textContent =
+                                "Unable to determine your location. Please try again.";
+                        }
+                    },
+
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    }
+                );
+
+            });
+
+        });
+    </script>
+
+</body>
+</html>

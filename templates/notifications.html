@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Notifications - PG Finder</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="navbar-brand">
+        🏠 StaySaathi
+    </div>
+
+    <div class="navbar-links">
+
+        <a href="{{ url_for('home') }}">
+            Home
+        </a>
+
+        <a href="{{ url_for('find_pg') }}">
+            Find PG
+        </a>
+
+        <a href="{{ url_for('notifications') }}">
+            🔔 Notifications
+        </a>
+
+        {% if session.get("role") == "student" %}
+
+            <a href="{{ url_for('student_dashboard') }}">
+                Dashboard
+            </a>
+
+        {% elif session.get("role") == "owner" %}
+
+            <a href="{{ url_for('owner_dashboard') }}">
+                Dashboard
+            </a>
+
+        {% endif %}
+
+        <form action="{{ url_for('logout') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <button type="submit" class="logout-btn">
+                Logout
+            </button>
+        </form>
+
+    </div>
+
+</nav>
+
+
+<main class="notifications-page">
+
+    <div class="notifications-header">
+
+        <h1>
+            🔔 Notifications
+        </h1>
+
+        <p>
+            Stay updated about your StaySaathi activity.
+        </p>
+
+    </div>
+
+
+    {% if notifications %}
+
+        <div class="notifications-list">
+
+            {% for notification in notifications %}
+
+                <div
+                    class="notification-card
+                    {% if not notification.is_read %}
+                        unread
+                    {% endif %}"
+                >
+
+                    <div class="notification-content">
+
+                        <h3>
+                            {{ notification.title }}
+                        </h3>
+
+                        <p>
+                            {{ notification.message }}
+                        </p>
+
+                        <small>
+                            {{ notification.created_at.strftime("%d %b %Y, %I:%M %p") }}
+                        </small>
+
+                    </div>
+
+
+                    {% if not notification.is_read %}
+
+                        <form
+                            action="{{ url_for(
+                                'mark_notification_read',
+                                notification_id=notification.id
+                            ) }}"
+                            method="POST"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <button
+                                type="submit"
+                                class="notification-read-button"
+                            >
+                                Mark as Read
+                            </button>
+
+                        </form>
+
+                    {% else %}
+
+                        <span class="notification-read-label">
+                            ✓ Read
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-notifications">
+
+            <div class="empty-notifications-icon">
+                🔔
+            </div>
+
+            <h2>
+                No notifications
+            </h2>
+
+            <p>
+                You're all caught up!
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+
+</html>

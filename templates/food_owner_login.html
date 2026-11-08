@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Food Owner Login | PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="login-container">
+
+        <h2>Food Business Owner Login</h2>
+        <p>Login to manage your food business.</p>
+
+        <!-- Display Flask flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST"
+                action="{{ url_for('food_owner_login') }}">
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label for="login_method">Login Using</label>
+
+            <select name="login_method"
+                    id="login_method"
+                    required
+                    onchange="updatePlaceholder()">
+
+                <option value="phone" selected>Phone Number</option>
+                <option value="email">Email Address</option>
+
+            </select>
+
+            <label for="identifier" id="identifier-label">
+                Phone Number
+            </label>
+
+            <input
+                type="text"
+                id="identifier"
+                name="identifier"
+                placeholder="Enter your phone number"
+                autocomplete="username"
+                required
+            >
+
+            <!-- Password -->
+            <label for="password">Password</label>
+
+            <div class="password-container">
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="toggle-password"
+                    onclick="togglePassword()"
+                    aria-label="Show password">
+                    👁️
+                </button>
+
+            </div>
+            <p class="otp-login-link">
+                Or
+                <a href="{{ url_for('otp_login') }}">Login with OTP</a>
+            </p>
+
+
+            <button type="submit">Login</button>
+
+        </form>
+
+        <p>
+            Don't have an account?
+            <a href="{{ url_for('register') }}">
+                Create Account
+            </a>
+        </p>
+
+        <p>
+            <a href="{{ url_for('home') }}">Back to Home</a>
+        </p>
+
+    </div>
+
+    <script>
+        function updatePlaceholder() {
+            const method = document.getElementById("login_method").value;
+            const identifier = document.getElementById("identifier");
+            const label = document.getElementById("identifier-label");
+
+            if (method === "phone") {
+                label.textContent = "Phone Number";
+                identifier.placeholder = "Enter your phone number";
+                identifier.type = "tel";
+            } else {
+                label.textContent = "Email Address";
+                identifier.placeholder = "Enter your email address";
+                identifier.type = "email";
+            }
+
+            identifier.value = "";
+        }
+        function togglePassword() {
+
+            const password = document.getElementById("password");
+            const toggleButton = document.querySelector(".toggle-password");
+
+            if (password.type === "password") {
+
+                password.type = "text";
+                toggleButton.textContent = "🙈";
+                toggleButton.setAttribute("aria-label", "Hide password");
+
+            } else {
+
+                password.type = "password";
+                toggleButton.textContent = "👁️";
+                toggleButton.setAttribute("aria-label", "Show password");
+
+            }
+        }
+    </script>
+
+</body>
+</html>
+

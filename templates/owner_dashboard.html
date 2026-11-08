@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Owner Dashboard - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         NAVIGATION
+    ========================== -->
+
+    <nav class="navbar">
+
+        <div class="logo">
+
+            <a href="{{ url_for('home') }}">
+                StaySaathi
+            </a>
+
+        </div>
+
+
+        <div class="nav-links">
+
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
+
+            <a href="{{ url_for('find_pg') }}">
+                Find Residence
+            </a>
+
+            <a href="{{ url_for('about') }}">
+                About
+            </a>
+            <a href="{{ url_for('notifications') }}">
+                🔔 Notifications
+            </a>
+
+
+            <form action="{{ url_for('logout') }}" method="POST" class="logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- =========================
+         OWNER DASHBOARD
+    ========================== -->
+
+    <main class="owner-dashboard">
+
+
+        <!-- =========================
+             WELCOME SECTION
+        ========================== -->
+
+        <section class="owner-welcome">
+
+            <div>
+
+                <p class="dashboard-small-title">
+                    OWNER DASHBOARD
+                </p>
+
+                <h1>
+                    Welcome, {{ name }}
+                </h1>
+
+                <p>
+                    Manage your PG listings from here.
+                </p>
+
+            </div>
+
+
+            <a
+                href="{{ url_for('add_pg') }}"
+                class="add-pg-main-btn"
+            >
+                + Add New PG
+            </a>
+
+        </section>
+
+
+
+        <!-- =========================
+             FLASH MESSAGES
+        ========================== -->
+
+        {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+
+                <div class="dashboard-messages">
+
+                    {% for message in messages %}
+
+                        <div class="dashboard-message">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+
+        <!-- =========================
+             PG LISTINGS
+        ========================== -->
+
+        <section class="owner-listings">
+
+
+            <div class="listings-heading">
+
+                <div>
+
+                    <h2>
+                        Your PG Listings
+                    </h2>
+
+                    <p>
+                        Manage the PGs you have added.
+                    </p>
+
+                </div>
+
+
+                <span class="listing-count">
+
+                    {{ pgs|length }}
+
+                    {% if pgs|length == 1 %}
+                        PG
+                    {% else %}
+                        PGs
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+
+
+            <!-- =========================
+                 NO PGs
+            ========================== -->
+
+            {% if not pgs %}
+
+                <div class="no-pgs">
+
+                    <div class="no-pgs-icon">
+                        🏠
+                    </div>
+
+                    <h3>
+                        No PGs Added Yet
+                    </h3>
+
+                    <p>
+                        You haven't added any PG listings.
+                        Add your first PG to make it visible
+                        to students.
+                    </p>
+
+                    <a
+                        href="{{ url_for('add_pg') }}"
+                        class="add-first-pg-btn"
+                    >
+                        + Add Your First PG
+                    </a>
+
+                </div>
+
+
+            {% else %}
+
+
+                <!-- =========================
+                     PG CARDS
+                ========================== -->
+
+                <div class="owner-pg-grid">
+
+
+                    {% for pg in pgs %}
+
+
+                        <div class="owner-pg-card">
+
+
+                            <!-- =========================
+                                 PG FRONT IMAGE
+                            ========================== -->
+
+                            {% if pg.front_image %}
+
+                                <div class="pg-card-image">
+
+                                    <img
+                                        src="{{ url_for(
+                                            'static',
+                                            filename='uploads/pg/' + pg.front_image
+                                        ) }}"
+                                        alt="{{ pg.name }} front view"
+                                    >
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="pg-card-image no-image">
+
+                                    <span>
+                                        📷 No photo
+                                    </span>
+
+                                </div>
+
+                            {% endif %}
+
+
+
+                            <!-- =========================
+                                 PG HEADER
+                            ========================== -->
+
+                            <div class="owner-pg-header">
+
+                                <div>
+
+                                    <h3>
+                                        {{ pg.name }}
+                                    </h3>
+
+                                    <p class="owner-pg-location">
+                                        📍 {{ pg.address }}
+                                    </p>
+
+                                </div>
+
+
+                                <span class="owner-gender">
+
+                                    {{ pg.gender|title }}
+
+                                </span>
+
+                            </div>
+
+
+
+                            <!-- =========================
+                                 PG INFORMATION
+                            ========================== -->
+
+                            <div class="owner-pg-info">
+
+
+                                <div class="owner-info-box">
+
+                                    <span>
+                                        Total
+                                    </span>
+
+                                    <strong>
+                                        {{ pg.total_rooms }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="owner-info-box">
+
+                                    <span>
+                                        Available
+                                    </span>
+
+                                    <strong
+                                        class="
+                                        {% if pg.available_rooms == 0 %}
+                                            rooms-full
+                                        {% endif %}
+                                        "
+                                    >
+
+                                        {{ pg.available_rooms }}
+
+                                    </strong>
+
+                                </div>
+                                <!-- LAST UPDATED -->
+
+                                <div class="pg-last-updated">
+                                    🕒 Last updated: {{ pg.updated_at | ist }} IST
+                                </div>
+
+
+                            </div>
+
+
+
+                            <!-- =========================
+                                 AVAILABILITY STATUS
+                            ========================== -->
+
+                            {% if pg.available_rooms > 0 %}
+
+                                <div class="owner-available-status">
+
+                                    ✓ Rooms/Beds Available
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="owner-full-status">
+
+                                    ✕ Currently Full
+
+                                </div>
+
+                            {% endif %}
+
+
+
+                            <!-- =========================
+                                 FACILITIES
+                            ========================== -->
+
+                            <div class="owner-facilities">
+
+
+                                {% if pg.wifi %}
+
+                                    <span>
+                                        📶 Wi-Fi
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.laundry %}
+
+                                    <span>
+                                        🧺 Laundry
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.ac %}
+
+                                    <span>
+                                        ❄️ AC
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.cctv %}
+
+                                    <span>
+                                        📹 CCTV
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if pg.power_backup %}
+
+                                    <span>
+                                        🔋 Power Backup
+                                    </span>
+
+                                {% endif %}
+
+
+                            </div>
+
+
+
+                            <!-- =========================
+                                 DESCRIPTION
+                            ========================== -->
+
+                            {% if pg.description %}
+
+                                <p class="owner-pg-description">
+
+                                    {{ pg.description }}
+
+                                </p>
+
+                            {% endif %}
+
+
+
+                            <!-- =========================
+                                 CONTACT
+                            ========================== -->
+
+                            <div class="owner-pg-contact">
+
+                                📞 {{ pg.contact }}
+
+                            </div>
+
+
+
+                            <!-- =========================
+                                 ACTION BUTTONS
+                            ========================== -->
+
+                            <div class="owner-pg-actions">
+
+
+                                <!-- VIEW -->
+
+                                <a
+                                    href="{{ url_for(
+                                        'pg_details',
+                                        pg_id=pg.id
+                                    ) }}"
+                                    class="owner-view-btn"
+                                >
+                                    View
+                                </a>
+
+
+
+                                <!-- EDIT -->
+
+                                <a
+                                    href="{{ url_for(
+                                        'edit_pg',
+                                        pg_id=pg.id
+                                    ) }}"
+                                    class="owner-edit-btn"
+                                >
+                                    Edit
+                                </a>
+
+
+
+                                <!-- DELETE -->
+
+                                <form
+                                    action="{{ url_for(
+                                        'delete_pg',
+                                        pg_id=pg.id
+                                    ) }}"
+                                    method="POST"
+                                    onsubmit="return confirm(
+                                        'Are you sure you want to delete this PG?'
+                                    );"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                    <button
+                                        type="submit"
+                                        class="owner-delete-btn"
+                                    >
+                                        Delete
+                                    </button>
+
+                                </form>
+
+
+                            </div>
+
+
+                        </div>
+
+
+                    {% endfor %}
+
+
+                </div>
+
+
+            {% endif %}
+
+
+        </section>
+
+
+    </main>
+
+
+</body>
+
+</html>

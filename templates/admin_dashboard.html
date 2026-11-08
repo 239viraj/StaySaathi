@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<!-- =========================
+     NAVBAR
+========================= -->
+
+<nav class="admin-navbar">
+
+    <div class="admin-logo">
+        StaySaathi
+    </div>
+
+    <div class="admin-nav-links">
+
+        <a href="{{ url_for('home') }}">
+            Home
+        </a>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Dashboard
+        </a>
+
+        <a href="{{url_for('admin_food_businesses')}}">
+            Manage Food Businesses
+        </a>
+
+        <form action="{{ url_for('logout') }}"
+            method="POST"
+            class="admin-logout-form">
+
+            <input type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}">
+
+            <button type="submit" class="admin-logout">
+                Logout
+            </button>
+
+        </form>
+    </div>
+
+</nav>
+
+
+<!-- =========================
+     MAIN CONTAINER
+========================= -->
+
+<div class="admin-container">
+
+    <div class="admin-header">
+
+        <div>
+
+            <h1>
+                Admin Dashboard
+            </h1>
+
+            <p>
+                Welcome, {{ session.get("name") }}
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         STATISTICS
+    ========================= -->
+
+    <section class="admin-stats">
+
+        <div class="admin-stat-card">
+
+            <div class="admin-stat-icon">
+                👥
+            </div>
+
+            <div>
+                <h3>
+                    Total Users
+                </h3>
+
+                <strong>
+                    {{ total_users }}
+                </strong>
+            </div>
+
+        </div>
+
+
+        <div class="admin-stat-card">
+
+            <div class="admin-stat-icon">
+                🎓
+            </div>
+
+            <div>
+
+                <h3>
+                    Students
+                </h3>
+
+                <strong>
+                    {{ total_students }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-stat-card">
+
+            <div class="admin-stat-icon">
+                👨‍💼
+            </div>
+
+            <div>
+
+                <h3>
+                    Owners
+                </h3>
+
+                <strong>
+                    {{ total_owners }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-stat-card">
+
+            <div class="admin-stat-icon">
+                🏠
+            </div>
+
+            <div>
+
+                <h3>
+                    PG Listings
+                </h3>
+
+                <strong>
+                    {{ total_pgs }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-stat-card">
+
+            <div class="admin-stat-icon">
+                ⭐
+            </div>
+
+            <div>
+
+                <h3>
+                    Reviews
+                </h3>
+
+                <strong>
+                    {{ total_reviews }}
+                </strong>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         USERS
+    ========================= -->
+
+    <section class="admin-section">
+
+        <div class="admin-section-header">
+
+            <div>
+
+                <h2>
+                    👥 Registered Users
+                </h2>
+
+                <p>
+                    Students and PG owners registered on the platform.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            Name
+                        </th>
+
+                        <th>
+                            Email
+                        </th>
+
+                        <th>
+                            Phone
+                        </th>
+
+                        <th>
+                            Role
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for user in users %}
+
+                    <tr>
+
+                        <td>
+                            {{ user.id }}
+                        </td>
+
+                        <td>
+                            {{ user.name }}
+                        </td>
+
+                        <td>
+                            {{ user.email }}
+                        </td>
+
+                        <td>
+                            {{ user.phone }}
+                        </td>
+
+                        <td>
+
+                            {% if user.role == "student" %}
+
+                                <span class="role-badge student-role">
+                                    Student
+                                </span>
+
+                            {% elif user.role == "owner" %}
+
+                                <span class="role-badge owner-role">
+                                    Owner
+                                </span>
+
+                            {% elif user.role == "admin" %}
+
+                                <span class="role-badge admin-role">
+                                    Admin
+                                </span>
+
+                            {% else %}
+
+                                <span class="role-badge">
+                                    {{ user.role }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="5"
+                            class="empty-table">
+
+                            No users found.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    <!-- =========================================
+        OWNER VERIFICATION
+    ========================================= -->
+
+    <div class="admin-section">
+
+        <div class="admin-section-header">
+            <h2>Owner Verification</h2>
+            <p>Review and verify PG owners.</p>
+        </div>
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for user in users if user.role == "owner" %}
+
+                    <tr>
+
+                        <td>
+                            {{ user.id }}
+                        </td>
+
+                        <td>
+                            {{ user.name }}
+                        </td>
+
+                        <td>
+                            {{ user.email }}
+                        </td>
+
+                        <td>
+                            {{ user.phone }}
+                        </td>
+
+                        <td>
+
+                            {% if user.verification_status == "verified" %}
+
+                                <span class="verification-status verified">
+                                    ✓ Verified
+                                </span>
+
+                            {% elif user.verification_status == "rejected" %}
+
+                                <span class="verification-status rejected">
+                                    ✕ Rejected
+                                </span>
+
+                            {% else %}
+
+                                <span class="verification-status pending">
+                                    ⏳ Pending
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="verification-actions">
+
+                            {% if user.verification_status != "verified" %}
+
+                                <form
+                                    action="{{ url_for(
+                                        'verify_owner',
+                                        user_id=user.id,
+                                        action='verify'
+                                    ) }}"
+                                    method="POST"
+                                    style="display:inline;"
+                                    onsubmit="return confirm('Verify this owner?');"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="verify-button"
+                                    >
+                                        ✓ Verify
+                                    </button>
+
+                                </form>
+
+                            {% endif %}
+
+
+                            {% if user.verification_status != "rejected" %}
+
+                                <form
+                                    action="{{ url_for(
+                                        'verify_owner',
+                                        user_id=user.id,
+                                        action='reject'
+                                    ) }}"
+                                    method="POST"
+                                    style="display:inline;"
+                                    onsubmit="return confirm('Reject this owner?');"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="reject-button"
+                                    >
+                                        ✕ Reject
+                                    </button>
+
+                                </form>
+
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="6">
+                            No owners found.
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+        PG VERIFICATION
+    ========================================= -->
+
+    <div class="admin-section">
+
+        <div class="admin-section-header">
+            <h2>PG Verification</h2>
+            <p>Review and verify PG listings before they become trusted.</p>
+        </div>
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+                        <th>ID</th>
+                        <th>PG Name</th>
+                        <th>Address</th>
+                        <th>Owner</th>
+                        <th>Gender</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for pg in pgs %}
+
+                    <tr>
+
+                        <td>
+                            {{ pg.id }}
+                        </td>
+
+                        <td>
+                            {{ pg.name }}
+                        </td>
+
+                        <td>
+                            {{ pg.address }}
+                        </td>
+
+                        <td>
+                            {% set owner = users
+                                |selectattr("id", "equalto", pg.owner_id)
+                                |first
+                            %}
+
+                            {% if owner %}
+                                {{ owner.name }}
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ pg.gender|capitalize }}
+                        </td>
+
+                        <td>
+
+                            {% if pg.verification_status == "verified" %}
+
+                                <span class="verification-status verified">
+                                    ✓ Verified
+                                </span>
+
+                            {% elif pg.verification_status == "rejected" %}
+
+                                <span class="verification-status rejected">
+                                    ✕ Rejected
+                                </span>
+
+                            {% else %}
+
+                                <span class="verification-status pending">
+                                    ⏳ Pending
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="verification-actions">
+
+                            {% if pg.verification_status != "verified" %}
+
+                                <form
+                                    action="{{ url_for(
+                                        'verify_pg',
+                                        pg_id=pg.id,
+                                        action='verify'
+                                    ) }}"
+                                    method="POST"
+                                    style="display: inline;"
+                                    onsubmit="return confirm('Verify this PG?');"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="verify-button"
+                                    >
+                                        ✓ Verify
+                                    </button>
+
+                                </form>
+                            {% endif %}
+
+
+                            {% if pg.verification_status != "rejected" %}
+
+                                <form
+                                    action="{{ url_for(
+                                        'verify_pg',
+                                        pg_id=pg.id,
+                                        action='reject'
+                                    ) }}"
+                                    method="POST"
+                                    style="display:inline;"
+                                    onsubmit="return confirm('Reject this PG?');"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="reject-button"
+                                    >
+                                        ✕ Reject
+                                    </button>
+
+                                </form>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="7">
+                            No PGs found.
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- =========================================
+        PG REPORTS
+    ========================================= -->
+
+    <div class="admin-section">
+
+        <div class="admin-section-header">
+
+            <h2>
+                PG Reports
+            </h2>
+
+            <p>
+                Review reports submitted by students.
+            </p>
+
+        </div>
+
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            PG
+                        </th>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            Reason
+                        </th>
+
+                        <th>
+                            Details
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for report in reports %}
+
+                        <tr>
+
+                            <!-- REPORT ID -->
+
+                            <td>
+                                #{{ report.id }}
+                            </td>
+
+
+                            <!-- PG -->
+
+                            <td>
+
+                                {% set reported_pg = pgs
+                                    |selectattr(
+                                        "id",
+                                        "equalto",
+                                        report.pg_id
+                                    )
+                                    |first
+                                %}
+
+                                {% if reported_pg %}
+
+                                    <strong>
+                                        {{ reported_pg.name }}
+                                    </strong>
+
+                                {% else %}
+
+                                    PG #{{ report.pg_id }}
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- STUDENT -->
+
+                            <td>
+
+                                {% set reporting_student = users
+                                    |selectattr(
+                                        "id",
+                                        "equalto",
+                                        report.student_id
+                                    )
+                                    |first
+                                %}
+
+                                {% if reporting_student %}
+
+                                    {{ reporting_student.name }}
+
+                                {% else %}
+
+                                    Student #{{ report.student_id }}
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- REASON -->
+
+                            <td>
+
+                                {{ report.reason }}
+
+                            </td>
+
+
+                            <!-- DESCRIPTION -->
+
+                            <td>
+
+                                {% if report.description %}
+
+                                    <span
+                                        title="{{ report.description }}"
+                                    >
+                                        {{ report.description[:60] }}
+
+                                        {% if report.description|length > 60 %}
+                                            ...
+                                        {% endif %}
+
+                                    </span>
+
+                                {% else %}
+
+                                    <span>
+                                        No additional details
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- STATUS -->
+
+                            <td>
+
+                                {% if report.status == "pending" %}
+
+                                    <span
+                                        class="report-status pending"
+                                    >
+                                        ⏳ Pending
+                                    </span>
+
+                                {% elif report.status == "resolved" %}
+
+                                    <span
+                                        class="report-status resolved"
+                                    >
+                                        ✓ Resolved
+                                    </span>
+
+                                {% elif report.status == "dismissed" %}
+
+                                    <span
+                                        class="report-status dismissed"
+                                    >
+                                        ✕ Dismissed
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- DATE -->
+
+                            <td>
+
+                                {{ report.created_at.strftime(
+                                    "%d %b %Y"
+                                ) }}
+
+                            </td>
+
+
+                            <!-- ACTION -->
+
+                            <td>
+
+                                {% if report.status == "pending" %}
+
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for(
+                                            'admin_report_action',
+                                            report_id=report.id,
+                                            action='resolve'
+                                        ) }}"
+                                        style="display:inline;"
+                                    >
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                        <textarea
+                                            name="admin_note"
+                                            maxlength="239"
+                                            placeholder="Optional admin note"
+                                            ></textarea>
+
+                                        <button
+                                            type="submit"
+                                            class="report-resolve-button"
+                                            onclick="return confirm('Mark this report as resolved?');"
+                                        >
+                                            ✓ Resolve
+                                        </button>
+
+                                    </form>
+
+
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for(
+                                            'admin_report_action',
+                                            report_id=report.id,
+                                            action='dismiss'
+                                        ) }}"
+                                        style="display:inline;"
+                                    >
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                        <button
+                                            type="submit"
+                                            class="report-dismiss-button"
+                                            onclick="return confirm('Dismiss this report?');"
+                                        >
+                                            ✕ Dismiss
+                                        </button>
+
+                                    </form>
+
+                                {% else %}
+
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for(
+                                            'admin_report_action',
+                                            report_id=report.id,
+                                            action='pending'
+                                        ) }}"
+                                        style="display:inline;"
+                                    >
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                        <button
+                                            type="submit"
+                                            class="report-pending-button"
+                                        >
+                                            ↩ Pending
+                                        </button>
+
+                                    </form>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+
+                            <td
+                                colspan="8"
+                                style="text-align:center;"
+                            >
+
+                                No reports submitted yet.
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- =========================
+         PG LISTINGS
+    ========================= -->
+
+    <section class="admin-section">
+
+        <div class="admin-section-header">
+
+            <div>
+
+                <h2>
+                    🏠 PG Listings
+                </h2>
+
+                <p>
+                    Manage PG listings added by owners.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            ID
+                        </th>
+
+                        <th>
+                            PG Name
+                        </th>
+
+                        <th>
+                            Address
+                        </th>
+
+                        <th>
+                            Gender
+                        </th>
+
+                        <th>
+                            Available
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for pg in pgs %}
+
+                    <tr>
+
+                        <td>
+                            {{ pg.id }}
+                        </td>
+
+                        <td>
+                            <strong>
+                                {{ pg.name }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            {{ pg.address }}
+                        </td>
+
+                        <td>
+                            {{ pg.gender }}
+                        </td>
+
+                        <td>
+                            {{ pg.available_rooms }}
+                            /
+                            {{ pg.total_rooms }}
+                        </td>
+
+                        <td>
+
+                            <a href="{{ url_for(
+                                'pg_details',
+                                pg_id=pg.id
+                            ) }}"
+                               class="admin-view-btn">
+
+                                View
+
+                            </a>
+
+
+                            <form
+                                action="{{ url_for(
+                                    'admin_delete_pg',
+                                    pg_id=pg.id
+                                ) }}"
+                                method="POST"
+                                style="display:inline;"
+                                onsubmit="return confirm(
+                                    'Are you sure you want to delete this PG?'
+                                );"
+                            >
+
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <button
+                                    type="submit"
+                                    class="admin-delete-btn"
+                                >
+
+                                    Delete
+
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="6"
+                            class="empty-table">
+
+                            No PG listings found.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         REVIEWS
+    ========================= -->
+
+    <section class="admin-section">
+
+        <div class="admin-section-header">
+
+            <div>
+
+                <h2>
+                    ⭐ Reviews
+                </h2>
+
+                <p>
+                    Monitor reviews submitted by students.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="admin-table-container">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            PG
+                        </th>
+
+                        <th>
+                            Rating
+                        </th>
+
+                        <th>
+                            Comment
+                        </th>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for review in reviews %}
+
+                    <tr>
+
+                        <td>
+                            {{ review.student_name }}
+                        </td>
+
+                        <td>
+                            {{ review.pg_name }}
+                        </td>
+
+                        <td>
+
+                            <span class="admin-rating">
+                                ⭐ {{ review.rating }}/5
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            {% if review.comment %}
+
+                                {{ review.comment }}
+
+                            {% else %}
+
+                                <span class="no-comment">
+                                    No comment
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            {{ review.created_at.strftime('%d-%m-%Y') }}
+                        </td>
+
+                        <td>
+
+                            <form
+                                action="{{ url_for(
+                                    'admin_delete_review',
+                                    review_id=review.id
+                                ) }}"
+                                method="POST"
+                                onsubmit="return confirm(
+                                    'Delete this review?'
+                                );"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <button
+                                    type="submit"
+                                    class="admin-delete-btn"
+                                >
+
+                                    Delete
+
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="6"
+                            class="empty-table">
+
+                            No reviews found.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+</body>
+
+</html>

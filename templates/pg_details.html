@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>{{ pg.name }} - PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+</head>
+
+
+<body>
+
+
+<!-- =========================
+     NAVBAR
+========================== -->
+
+<nav class="navbar">
+
+    <div class="nav-logo">
+        StaySaathi
+    </div>
+
+
+    <div class="nav-links">
+
+        <a href="{{ url_for('home') }}">
+            Home
+        </a>
+
+        <a href="{{ url_for('find_pg') }}">
+            Find PG
+        </a>
+
+        <a href="{{ url_for('about') }}">
+            About
+        </a>
+
+
+        {% if session.get("user_id") %}
+
+            {% if session.get("role") == "student" %}
+
+                <a href="{{ url_for('student_dashboard') }}">
+                    Dashboard
+                </a>
+
+            {% elif session.get("role") == "owner" %}
+
+                <a href="{{ url_for('owner_dashboard') }}">
+                    Dashboard
+                </a>
+
+            {% endif %}
+
+
+            <a href="{{ url_for('logout') }}">
+                Logout
+            </a>
+
+        {% else %}
+
+            <a href="{{ url_for('login') }}">
+                Login
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</nav>
+
+
+
+<!-- =========================
+     PG DETAILS
+========================== -->
+
+<main class="pg-details-page">
+
+    <div class="pg-details-container">
+
+
+        <!-- =========================
+             HEADER
+        ========================== -->
+
+        <div class="pg-details-header">
+
+
+            <h1>
+                {{ pg.name }}
+            </h1>
+            {% if pg.verification_status == "verified" %}
+                <span class="verified-badge">
+                    ✓ Verified Residence
+                </span>
+            {% endif %}
+
+            <p>
+                Find complete information about this PG
+            </p>
+
+        </div>
+
+
+
+        <!-- =========================
+             FRONT VIEW PHOTO
+        ========================== -->
+
+        <div class="pg-details-card pg-photo-card">
+
+            <h2>
+                📸 Residence Front View
+            </h2>
+
+
+            {% if pg.front_image %}
+
+                <div class="pg-details-photo">
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='uploads/pg/' + pg.front_image
+                        ) }}"
+                        alt="{{ pg.name }} front view"
+                    >
+
+                </div>
+
+
+            {% else %}
+
+                <div class="pg-no-photo">
+
+                    <div class="pg-no-photo-icon">
+                        📷
+                    </div>
+
+                    <p>
+                        No front-view photo has been uploaded yet.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- =========================
+             BASIC INFORMATION
+        ========================== -->
+
+        <div class="pg-details-card">
+
+            <h2>
+                Residence Information
+            </h2>
+
+
+            <div class="pg-info-grid">
+
+
+                <!-- Location -->
+
+                <div class="pg-info-item">
+
+                    <span class="info-label">
+                        📍 Location
+                    </span>
+
+                    <span class="info-value">
+                        {{ pg.address }}
+                    </span>
+
+                </div>
+
+
+
+                <!-- Gender -->
+
+                <div class="pg-info-item">
+
+                    <span class="info-label">
+                        👥 PG For
+                    </span>
+
+                    <span class="info-value">
+                        {{ pg.gender|title }}
+                    </span>
+
+                </div>
+
+
+
+                <!-- Total Rooms -->
+
+                <div class="pg-info-item">
+
+                    <span class="info-label">
+                        🛏️ Total Rooms / Beds
+                    </span>
+
+                    <span class="info-value">
+                        {{ pg.total_rooms }}
+                    </span>
+
+                </div>
+
+
+
+                <!-- Available Rooms -->
+
+                <div class="pg-info-item">
+
+                    <span class="info-label">
+                        🟢 Available Rooms / Beds
+                    </span>
+
+                    <span
+                        class="info-value
+                        {% if pg.available_rooms > 0 %}
+                            available
+                        {% else %}
+                            unavailable
+                        {% endif %}"
+                    >
+
+                        {{ pg.available_rooms }}
+
+                    </span>
+
+                </div>
+                <!-- Last Updated -->
+
+                <div class="pg-info-item">
+
+                    <span class="info-label">
+                        🕒 Last Updated
+                    </span>
+
+                    <span class="info-value">
+                        {{ pg.updated_at | ist }} IST
+                    </span>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =========================
+             PG MAP
+        ========================== -->
+
+        {% if pg.latitude is not none and pg.longitude is not none %}
+
+            <div class="pg-details-card">
+
+                <h2>
+                    📍 PG Location
+                </h2>
+
+                <p class="pg-map-description">
+                    View the location of this PG on the map.
+                </p>
+
+
+                <div
+                    id="pg-details-map"
+                    data-lat="{{ pg.latitude }}"
+                    data-lng="{{ pg.longitude }}"
+                    data-name="{{ pg.name }}"
+                    data-address="{{ pg.address }}">
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="pg-details-card">
+
+                <h2>
+                    📍 PG Location
+                </h2>
+
+                <p class="pg-map-description">
+                    Location information is not available for this PG yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+
+        <!-- =========================
+             FACILITIES
+        ========================== -->
+
+        <div class="pg-details-card">
+
+            <h2>
+                Facilities
+            </h2>
+
+
+            <div class="facilities-list">
+
+
+                {% if pg.wifi %}
+
+                    <span class="facility">
+                        📶 Wi-Fi
+                    </span>
+
+                {% endif %}
+
+
+
+                {% if pg.laundry %}
+
+                    <span class="facility">
+                        🧺 Laundry
+                    </span>
+
+                {% endif %}
+
+
+
+                {% if pg.ac %}
+
+                    <span class="facility">
+                        ❄️ AC
+                    </span>
+
+                {% endif %}
+
+
+
+                {% if pg.cctv %}
+
+                    <span class="facility">
+                        📹 CCTV
+                    </span>
+
+                {% endif %}
+
+
+
+                {% if pg.power_backup %}
+
+                    <span class="facility">
+                        🔋 Power Backup
+                    </span>
+
+                {% endif %}
+
+
+
+                {% if not pg.wifi
+                      and not pg.laundry
+                      and not pg.ac
+                      and not pg.cctv
+                      and not pg.power_backup %}
+
+                    <p>
+                        No facilities listed.
+                    </p>
+
+                {% endif %}
+
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =========================
+             DESCRIPTION
+        ========================== -->
+
+        <div class="pg-details-card">
+
+            <h2>
+                About This PG
+            </h2>
+
+
+            {% if pg.description %}
+
+                <p class="pg-full-description">
+                    {{ pg.description }}
+                </p>
+
+            {% else %}
+
+                <p class="pg-full-description">
+                    No description provided by the owner.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- =========================
+            SAVE PG + REPORT PG
+        ========================== -->
+
+        {% if session.get("user_id")
+            and session.get("role") == "student" %}
+
+            <!-- SAVE PG -->
+
+            <div class="save-pg-card">
+
+                <h2>
+                    Save This PG
+                </h2>
+
+                <p>
+                    Save this PG to easily find it later.
+                </p>
+
+                <form
+                    action="{{ url_for('save_pg', pg_id=pg.id) }}"
+                    method="POST"
+                >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <button
+                        type="submit"
+                        class="save-pg-btn"
+                    >
+                        ❤️ Save PG
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- REPORT PG -->
+
+            <div class="report-pg-card">
+
+                <h2>
+                    Report This PG
+                </h2>
+
+                <p>
+                    Found incorrect or misleading information?
+                    Let us know.
+                </p>
+
+                <a
+                    href="{{ url_for('report_pg', pg_id=pg.id) }}"
+                    class="report-pg-button"
+                >
+                    🚨 Report PG
+                </a>
+
+            </div>
+
+        {% endif %}
+
+        <!-- =========================
+            REVIEWS
+        ========================== -->
+
+        <div class="reviews-section">
+
+            <div class="reviews-header">
+
+                <h2>
+                    ⭐ Reviews & Ratings
+                </h2>
+
+                {% if review_count > 0 %}
+
+                    <div class="overall-rating">
+
+                        <div class="overall-rating-number">
+                            {{ average_rating }}
+                        </div>
+
+                        <div class="overall-rating-stars">
+
+                            {% for i in range(1, 6) %}
+
+                                {% if i <= average_rating|round(0, 'floor') %}
+
+                                    <span class="star filled">
+                                        ★
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="star">
+                                        ★
+                                    </span>
+
+                                {% endif %}
+
+                            {% endfor %}
+
+                        </div>
+
+                        <div class="review-count">
+
+                            Based on
+                            {{ review_count }}
+                            {% if review_count == 1 %}
+                                review
+                            {% else %}
+                                reviews
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <p class="no-reviews-text">
+                        No reviews yet. Be the first student to review this PG!
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+
+            {% if review_count > 0 %}
+
+                <!-- =========================
+                    RATING BREAKDOWN
+                ========================== -->
+
+                <div class="rating-breakdown">
+
+                    <div class="rating-breakdown-item">
+
+                        <span>
+                            Cleanliness
+                        </span>
+
+                        <strong>
+                            {{ average_cleanliness }} ⭐
+                        </strong>
+
+                    </div>
+
+
+                    <div class="rating-breakdown-item">
+
+                        <span>
+                            Safety
+                        </span>
+
+                        <strong>
+                            {{ average_safety }} ⭐
+                        </strong>
+
+                    </div>
+
+
+                    <div class="rating-breakdown-item">
+
+                        <span>
+                            Location
+                        </span>
+
+                        <strong>
+                            {{ average_location }} ⭐
+                        </strong>
+
+                    </div>
+
+
+                    <div class="rating-breakdown-item">
+
+                        <span>
+                            Facilities
+                        </span>
+
+                        <strong>
+                            {{ average_facilities }} ⭐
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =========================
+                    INDIVIDUAL REVIEWS
+                ========================== -->
+
+                <div class="individual-reviews">
+
+                    <h3>
+                        Student Reviews
+                    </h3>
+
+
+                    {% for item in reviews %}
+
+                        {% set review = item.review %}
+
+                        <div class="individual-review">
+
+                            <div class="review-top">
+
+                                <div class="review-student">
+
+                                    <div class="student-avatar">
+                                        {{ item.student_name[0]|upper }}
+                                    </div>
+
+                                    <div>
+
+                                        <strong>
+                                            {{ item.student_name }}
+                                        </strong>
+
+                                        <div class="review-date">
+
+                                            {{ review.created_at.strftime("%d %b %Y") }}
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="review-rating">
+
+                                    {% for i in range(1, 6) %}
+
+                                        {% if i <= review.rating %}
+
+                                            <span class="star filled">
+                                                ★
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="star">
+                                                ★
+                                            </span>
+
+                                        {% endif %}
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+
+                            {% if review.comment %}
+
+                                <p class="review-text">
+
+                                    {{ review.comment }}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <div class="review-categories">
+
+                                <span>
+                                    Cleanliness:
+                                    <strong>
+                                        {{ review.cleanliness }} ⭐
+                                    </strong>
+                                </span>
+
+                                <span>
+                                    Safety:
+                                    <strong>
+                                        {{ review.safety }} ⭐
+                                    </strong>
+                                </span>
+
+                                <span>
+                                    Location:
+                                    <strong>
+                                        {{ review.location_rating }} ⭐
+                                    </strong>
+                                </span>
+
+                                <span>
+                                    Facilities:
+                                    <strong>
+                                        {{ review.facilities_rating }} ⭐
+                                    </strong>
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =========================
+                WRITE REVIEW
+            ========================== -->
+
+            {% if session.get("user_id")
+                and session.get("role") == "student" %}
+
+                {% if user_review %}
+
+                    <div class="already-reviewed">
+
+                        <h3>
+                            ✓ You have already reviewed this PG
+                        </h3>
+
+                        <p>
+                            You can view your review above.
+                        </p>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="review-form-container">
+
+                        <div class="review-section-header">
+
+                            <h2>
+                                ⭐ Write a Review
+                            </h2>
+
+                            <p>
+                                Share your experience with this PG.
+                            </p>
+
+                        </div>
+
+
+                        <form
+                            action="{{ url_for(
+                                'submit_review',
+                                pg_id=pg.id
+                            ) }}"
+                            method="POST"
+                            class="review-form"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <!-- OVERALL RATING -->
+
+                            <div class="rating-field">
+
+                                <label>
+                                    Overall Rating
+                                </label>
+
+                                <div class="star-rating">
+
+                                    <input
+                                        type="radio"
+                                        id="overall-5"
+                                        name="rating"
+                                        value="5"
+                                        required
+                                    >
+
+                                    <label for="overall-5">
+                                        ★
+                                    </label>
+
+
+                                    <input
+                                        type="radio"
+                                        id="overall-4"
+                                        name="rating"
+                                        value="4"
+                                    >
+
+                                    <label for="overall-4">
+                                        ★
+                                    </label>
+
+
+                                    <input
+                                        type="radio"
+                                        id="overall-3"
+                                        name="rating"
+                                        value="3"
+                                    >
+
+                                    <label for="overall-3">
+                                        ★
+                                    </label>
+
+
+                                    <input
+                                        type="radio"
+                                        id="overall-2"
+                                        name="rating"
+                                        value="2"
+                                    >
+
+                                    <label for="overall-2">
+                                        ★
+                                    </label>
+
+
+                                    <input
+                                        type="radio"
+                                        id="overall-1"
+                                        name="rating"
+                                        value="1"
+                                    >
+
+                                    <label for="overall-1">
+                                        ★
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- CLEANLINESS -->
+
+                            <div class="rating-field">
+
+                                <label>
+                                    Cleanliness
+                                </label>
+
+                                <select
+                                    name="cleanliness"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select rating
+                                    </option>
+
+                                    <option value="5">
+                                        ⭐⭐⭐⭐⭐ - Excellent
+                                    </option>
+
+                                    <option value="4">
+                                        ⭐⭐⭐⭐ - Good
+                                    </option>
+
+                                    <option value="3">
+                                        ⭐⭐⭐ - Average
+                                    </option>
+
+                                    <option value="2">
+                                        ⭐⭐ - Poor
+                                    </option>
+
+                                    <option value="1">
+                                        ⭐ - Very Poor
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- SAFETY -->
+
+                            <div class="rating-field">
+
+                                <label>
+                                    Safety
+                                </label>
+
+                                <select
+                                    name="safety"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select rating
+                                    </option>
+
+                                    <option value="5">
+                                        ⭐⭐⭐⭐⭐ - Excellent
+                                    </option>
+
+                                    <option value="4">
+                                        ⭐⭐⭐⭐ - Good
+                                    </option>
+
+                                    <option value="3">
+                                        ⭐⭐⭐ - Average
+                                    </option>
+
+                                    <option value="2">
+                                        ⭐⭐ - Poor
+                                    </option>
+
+                                    <option value="1">
+                                        ⭐ - Very Poor
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- LOCATION -->
+
+                            <div class="rating-field">
+
+                                <label>
+                                    Location
+                                </label>
+
+                                <select
+                                    name="location_rating"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select rating
+                                    </option>
+
+                                    <option value="5">
+                                        ⭐⭐⭐⭐⭐ - Excellent
+                                    </option>
+
+                                    <option value="4">
+                                        ⭐⭐⭐⭐ - Good
+                                    </option>
+
+                                    <option value="3">
+                                        ⭐⭐⭐ - Average
+                                    </option>
+
+                                    <option value="2">
+                                        ⭐⭐ - Poor
+                                    </option>
+
+                                    <option value="1">
+                                        ⭐ - Very Poor
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- FACILITIES -->
+
+                            <div class="rating-field">
+
+                                <label>
+                                    Facilities
+                                </label>
+
+                                <select
+                                    name="facilities_rating"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select rating
+                                    </option>
+
+                                    <option value="5">
+                                        ⭐⭐⭐⭐⭐ - Excellent
+                                    </option>
+
+                                    <option value="4">
+                                        ⭐⭐⭐⭐ - Good
+                                    </option>
+
+                                    <option value="3">
+                                        ⭐⭐⭐ - Average
+                                    </option>
+
+                                    <option value="2">
+                                        ⭐⭐ - Poor
+                                    </option>
+
+                                    <option value="1">
+                                        ⭐ - Very Poor
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- COMMENT -->
+
+                            <div class="review-comment-field">
+
+                                <label for="comment">
+                                    Your Review
+                                </label>
+
+                                <textarea
+                                    id="comment"
+                                    name="comment"
+                                    rows="5"
+                                    maxlength="1000"
+                                    placeholder="Tell other students about your experience..."
+                                ></textarea>
+
+                            </div>
+
+
+                            <button
+                                type="submit"
+                                class="submit-review-btn"
+                            >
+                                ⭐ Submit Review
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                {% endif %}
+
+            {% endif %}
+
+        </div>
+                
+        <!-- =========================
+             CONTACT OWNER
+        ========================== -->
+
+        <div class="contact-owner-card">
+
+            <h2>
+                Contact Owner
+            </h2>
+
+
+            {% if session.get("user_id")
+                  and session.get("role") == "student" %}
+
+
+                <!-- LOGGED-IN STUDENT -->
+
+                <p>
+                    Interested in this PG?
+                    You can contact the owner directly.
+                </p>
+
+
+                <a
+                    href="tel:{{ pg.contact }}"
+                    class="contact-owner-btn"
+                >
+
+                    📞 Call Owner
+
+                </a>
+
+
+                <p class="owner-phone">
+                    {{ pg.contact }}
+                </p>
+
+
+            {% else %}
+
+
+                <!-- PUBLIC VISITOR -->
+
+                <p>
+                    Interested in this PG?
+                    Create a student account or login to
+                    contact the owner.
+                </p>
+
+
+                <a
+                    href="{{ url_for('login') }}"
+                    class="contact-owner-btn"
+                >
+
+                    🔐 Login to Contact Owner
+
+                </a>
+
+
+                <p class="owner-login-note">
+
+                    Owner contact details are available
+                    to registered students.
+
+                </p>
+
+
+            {% endif %}
+
+        </div>
+
+
+
+        <!-- =========================
+             BACK BUTTON
+        ========================== -->
+
+        <div class="back-to-search">
+
+            <a href="{{ url_for('find_pg') }}">
+                ← Back to Find PG
+            </a>
+
+        </div>
+
+
+    </div>
+
+</main>
+
+
+
+<!-- =========================
+     LEAFLET JAVASCRIPT
+========================== -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+
+    const mapElement =
+        document.getElementById("pg-details-map");
+
+
+    if (!mapElement) {
+        return;
+    }
+
+
+    const latitude =
+        parseFloat(mapElement.dataset.lat);
+
+
+    const longitude =
+        parseFloat(mapElement.dataset.lng);
+
+
+    const name =
+        mapElement.dataset.name;
+
+
+    const address =
+        mapElement.dataset.address;
+
+
+
+    if (
+        Number.isNaN(latitude) ||
+        Number.isNaN(longitude)
+    ) {
+
+        mapElement.innerHTML =
+            "📍 PG location is unavailable.";
+
+        return;
+    }
+
+
+
+    /* =========================
+       CREATE MAP
+    ========================== */
+
+    const map =
+        L.map("pg-details-map").setView(
+            [
+                latitude,
+                longitude
+            ],
+            16
+        );
+
+
+
+    /* =========================
+       OPENSTREETMAP
+    ========================== */
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 19,
+
+            attribution:
+                "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(map);
+
+
+
+    /* =========================
+       PG MARKER
+    ========================== */
+
+    const marker =
+        L.marker([
+            latitude,
+            longitude
+        ]).addTo(map);
+
+
+
+    /* =========================
+       POPUP
+    ========================== */
+
+    marker.bindPopup(
+        `
+        <div class="map-popup">
+
+            <h3>
+                ${name}
+            </h3>
+
+            <p>
+                📍 ${address}
+            </p>
+
+        </div>
+        `
+    ).openPopup();
+
+});
+
+</script>
+
+
+</body>
+
+</html>

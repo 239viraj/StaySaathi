@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Food Business | PG Finder</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <main class="food-registration-container">
+
+        <h1>Register Your Food Business</h1>
+
+        <p>
+            Showcase your dhaba, restaurant,food stall, or tiffin service,
+            to students in your area.
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST"
+              action="{{ url_for('register_food_business') }}"
+              enctype="multipart/form-data">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label for="business_name">Business Name *</label>
+            <input type="text"
+                   id="business_name"
+                   name="business_name"
+                   maxlength="150"
+                   required>
+
+            <label for="category">Business Category *</label>
+            <select id="category" name="category" required>
+                <option value="">Select a category</option>
+                <option value="dhaba">Dhaba</option>
+                <option value="food_stall">Food Stall</option>
+                <option value="tiffin_service">Tiffin Service</option>
+                <option value="restaurant">Restaurant</option>
+            </select>
+
+            <label for="phone">Contact Number *</label>
+            <input type="tel"
+                   id="phone"
+                   name="phone"
+                   maxlength="15"
+                   required>
+
+            <label for="address">Business Address *</label>
+            <textarea id="address"
+                      name="address"
+                      maxlength="255"
+                      required></textarea>
+
+            <!-- BUSINESS LOCATION -->
+
+            <label for="latitude">Latitude</label>
+            <input
+                type="number"
+                id="latitude"
+                name="latitude"
+                step="any"
+                min="-90"
+                max="90"
+                placeholder="e.g. 30.7333">
+
+            <label for="longitude">Longitude</label>
+            <input
+                type="number"
+                id="longitude"
+                name="longitude"
+                step="any"
+                min="-180"
+                max="180"
+                placeholder="e.g. 76.7794">
+
+            <button type="button" id="get-location">
+                Use My Current Location
+            </button>          
+
+            <label for="description">Business Description</label>
+            <textarea id="description"
+                      name="description"
+                      maxlength="312"></textarea>
+
+            <label for="opening_hours">Opening Hours</label>
+            <input type="text"
+                   id="opening_hours"
+                   name="opening_hours"
+                   maxlength="100"
+                   placeholder="e.g. 9 AM - 10 PM">
+
+            
+            <label for="menu_photos">Upload Menu Photos (Optional) </label>
+
+            <input
+                type="file"
+                id="menu_photos"
+                name="menu_photos"
+                accept=".jpg,.jpeg,.png,.WebP"
+                multiple
+            >
+
+            <small>
+                Menu photos are optional.You can upload up to 5 photos JPG, PNG, and WebP images only.
+                Maximum 5 MB per image.
+            </small>
+            <button type="submit">Register Business</button>
+
+        </form>
+
+    </main>
+
+    <script>
+    document.getElementById("get-location").addEventListener("click", function () {
+        if (!navigator.geolocation) {
+            alert("Your browser does not support location detection.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                document.getElementById("latitude").value =
+                    position.coords.latitude.toFixed(6);
+
+                document.getElementById("longitude").value =
+                    position.coords.longitude.toFixed(6);
+
+                alert("Location captured successfully!");
+            },
+            function () {
+                alert("Unable to get your location. Please allow location access.");
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
+    </script>
+
+</body>
+</html>
+
