@@ -2537,35 +2537,19 @@ def food_owner_login():
 # =========================
 # OTP LOGIN: REQUEST OTP
 # =========================
-
 @app.route("/login-otp/request", methods=["POST"])
 @limiter.limit("5 per 10 minutes", methods=["POST"])
 def request_login_otp():
 
     role = request.form.get("role", "").strip().lower()
-    login_method = request.form.get("login_method", "").strip().lower()
-    identifier = request.form.get("identifier", "").strip()
+    identifier = request.form.get("identifier", "").strip().lower()
 
     valid_roles = {"student", "owner", "food_owner"}
 
     # Validate form data
-    if (
-        role not in valid_roles
-        or login_method not in {"email", "phone"}
-        or not identifier
-    ):
+    if role not in valid_roles or not identifier:
         flash("Please enter valid login details.", "danger")
         return redirect(url_for("otp_login"))
-
-    # SMS OTP is not implemented yet
-    if login_method == "phone":
-        flash(
-            "Phone OTP login is not available yet. Please select email.",
-            "warning"
-        )
-        return redirect(url_for("otp_login"))
-
-    identifier = identifier.lower()
 
     try:
         user = User.query.filter_by(
