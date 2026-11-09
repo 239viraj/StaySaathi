@@ -5,9 +5,10 @@ from dotenv import load_dotenv
 import secrets
 import hashlib
 import hmac
+import mimetypes
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from storage import upload_file,download_file,delete_file,db,DBBYTE_BUCKET
 from sqlalchemy import func
 import math
 from PIL import Image, UnidentifiedImageError
@@ -17,7 +18,7 @@ from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 from flask import current_app
 from math import radians, sin, cos, sqrt, atan2
-from flask import Flask, render_template, request, redirect, url_for, session, flash,abort,send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash,abort,send_file,send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import SQLAlchemyError
@@ -106,12 +107,12 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 
 # New food menu image upload folder
-app.config["FOOD_MENU_FOLDER"] = os.path.join(
-    app.root_path,
-    "static",
-    "uploads",
-    "food_menus"
-)
+# app.config["FOOD_MENU_FOLDER"] = os.path.join(
+#     app.root_path,
+#     "static",
+#     "uploads",
+#     "food_menus"
+# )
 
 # Maximum total size of one upload request: 26 MB
 app.config["MAX_CONTENT_LENGTH"] = 26 * 1024 * 1024
@@ -131,6 +132,14 @@ ALLOWED_IMAGE_EXTENSIONS = {
     "png",
     "webp"
 }
+app.config["FOOD_MENU_FOLDER"] = os.path.join(
+    app.root_path,
+    "static",
+    "uploads",
+    "food_menus"
+)
+
+os.makedirs(app.config["FOOD_MENU_FOLDER"], exist_ok=True)
 
 # Create both folders if they do not exist
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -1010,22 +1019,44 @@ def register_food_business():
         validated_photos.append((extension, image_bytes))
 
     # Prepare unique filenames. Store only relative paths in the database.
-    saved_paths = []
+    # =========================
+    # UPLOAD MENU PHOTOS TO DBBYTE
+    # =========================
+
+    uploaded_objects = []
     photo_paths = []
 
     try:
         for extension, image_bytes in validated_photos:
+
             filename = f"{uuid.uuid4().hex}.{extension}"
-            absolute_path = os.path.join(
-                app.config["FOOD_MENU_FOLDER"],
-                    filename
+
+            object_name = f"food-menus/{filename}"
+
+            content_types = {
+                "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "png": "image/png",
+                "webp": "image/webp"
+            }
+
+            # Upload image bytes to DBByte
+            result = db.objects.upload(
+                DBBYTE_BUCKET,
+                key=object_name,
+                body=image_bytes,
+                content_type=content_types[extension]
             )
 
-            with open(absolute_path, "xb") as file:
-                file.write(image_bytes)
+            if not result:
+                raise RuntimeError(
+                    "Failed to upload a menu photo to DBByte."
+                )
 
-            saved_paths.append(absolute_path)
-            photo_paths.append(f"uploads/food_menus/{filename}")
+            uploaded_objects.append(object_name)
+
+            # Store DBByte object name in database
+            photo_paths.append(object_name)
 
         food_business = FoodBusiness(
             owner_id=session["user_id"],
@@ -1049,13 +1080,14 @@ def register_food_business():
         db.session.rollback()
 
         # Remove files if registration fails.
-        for file_path in saved_paths:
+        # Delete uploaded DBByte objects if registration fails.
+        for object_name in uploaded_objects:
             try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except OSError:
+                delete_file(object_name)
+            except Exception:
                 app.logger.exception(
-                    "Could not remove an uploaded menu photo"
+                    "Could not delete uploaded menu photo: %s",
+                    object_name
                 )
 
         # Print the actual error in the terminal.
@@ -1132,6 +1164,7 @@ def food_finder():
     for business in businesses:
 
         # Menu photos
+        # Menu photos
         try:
             photo_paths = json.loads(
                 business.menu_photos or "[]"
@@ -1144,14 +1177,17 @@ def food_finder():
                 path for path in photo_paths
                 if (
                     isinstance(path, str)
-                    and path.startswith("uploads/food_menus/")
+                    and (
+                        path.startswith("food-menus/")
+                        or path.startswith("uploads/food_menus/")
+                    )
                     and ".." not in path.split("/")
+                    and "\\" not in path
                 )
             ]
 
         except (json.JSONDecodeError, TypeError):
             business.display_menu_photos = []
-
         # Distance
         business.distance_km = None
 
@@ -2080,6 +2116,81 @@ def compare_pgs():
         pgs=comparison_pgs
     )
 
+####################pg images################
+
+@app.route("/pg-image/<path:object_name>")
+def pg_image(object_name):
+
+    # New images stored in DBByte
+    if object_name.startswith("pg-images/"):
+
+        image_data = download_file(object_name)
+
+        if not image_data:
+            abort(404)
+
+        content_type = mimetypes.guess_type(object_name)[0]
+
+        return send_file(
+            BytesIO(image_data),
+            mimetype=content_type or "application/octet-stream",
+            max_age=3600
+        )
+
+    # Old images stored locally
+    if "/" not in object_name and "\\" not in object_name:
+
+        return send_from_directory(
+            app.config["UPLOAD_FOLDER"],
+            object_name
+        )
+
+    abort(404)
+
+########food menu images#####################
+
+
+@app.route("/food-menu-image/<path:object_name>")
+def food_menu_image(object_name):
+
+    # 1. Handle images stored in DBByte
+    if object_name.startswith("food-menus/"):
+
+        image_data = download_file(object_name)
+
+        if not image_data:
+            abort(404)
+
+        content_type = mimetypes.guess_type(object_name)[0]
+
+        return send_file(
+            BytesIO(image_data),
+            mimetype=content_type or "application/octet-stream",
+            max_age=3600
+        )
+
+    # 2. Handle old images stored locally
+    if object_name.startswith("uploads/food_menus/"):
+
+        filename = object_name.replace("uploads/food_menus/", "", 1)
+
+        # Prevent unsafe filenames
+        if (
+            not filename
+            or "/" in filename
+            or "\\" in filename
+            or ".." in filename
+        ):
+            abort(404)
+
+        return send_from_directory(
+            app.config["FOOD_MENU_FOLDER"],
+            filename
+        )
+
+    # Reject all other paths
+    abort(404)
+
     
 ################### opt to gmail function ###########################
 def send_otp_email(recipient_email, otp):
@@ -2942,28 +3053,55 @@ def food_business_renewal(business_id):
 
         proof = request.files.get("payment_screenshot")
         proof_path = None
+
         if proof and proof.filename:
             safe_name = secure_filename(proof.filename)
+
             if not allowed_image(safe_name):
                 flash("Optional payment screenshot must be JPG, PNG or WebP.")
-                return render_template("food_subscription_payment.html", business=business,
-                                       plans=FOOD_SUBSCRIPTION_PLANS, selected_plan=plan_key,
-                                       plan=plan, payment_uri=payment_uri, qr_image=qr_image)
+                return render_template(
+                    "food_subscription_payment.html",
+                    business=business,
+                    plans=FOOD_SUBSCRIPTION_PLANS,
+                    selected_plan=plan_key,
+                    plan=plan,
+                    payment_uri=payment_uri,
+                    qr_image=qr_image
+                )
+
             proof.stream.seek(0)
             image_bytes = proof.stream.read(MAX_MENU_PHOTO_SIZE + 1)
             proof.stream.seek(0)
+
             if len(image_bytes) > MAX_MENU_PHOTO_SIZE or not validate_image(proof):
                 flash("Screenshot must be a valid image no larger than 5 MB.")
-                return render_template("food_subscription_payment.html", business=business,
-                                       plans=FOOD_SUBSCRIPTION_PLANS, selected_plan=plan_key,
-                                       plan=plan, payment_uri=payment_uri, qr_image=qr_image)
+                return render_template(
+                    "food_subscription_payment.html",
+                    business=business,
+                    plans=FOOD_SUBSCRIPTION_PLANS,
+                    selected_plan=plan_key,
+                    plan=plan,
+                    payment_uri=payment_uri,
+                    qr_image=qr_image
+                )
+
             extension = safe_name.rsplit(".", 1)[1].lower()
             filename = f"{uuid.uuid4().hex}.{extension}"
-            absolute_path = os.path.join(PAYMENT_PROOF_FOLDER, filename)
-            with open(absolute_path, "xb") as image_file:
-                image_file.write(image_bytes)
-            proof_path = filename
 
+            # Store payment proof privately in DBByte
+            object_name = f"payment-proofs/{filename}"
+
+            proof_path = upload_file(proof, object_name)
+
+            if not proof_path:
+                flash("Could not upload payment screenshot. Please try again.")
+                return redirect(
+                    url_for(
+                        "food_business_renewal",
+                        business_id=business.id,
+                        plan=plan_key
+                    )
+                )
         payment_request = FoodSubscriptionPaymentRequest(
             business_id=business.id,
             owner_id=session["user_id"],
@@ -2978,15 +3116,24 @@ def food_business_renewal(business_id):
             db.session.commit()
         except Exception:
             db.session.rollback()
-            if proof_path:
-                try:
-                    os.remove(os.path.join(PAYMENT_PROOF_FOLDER,proof_path))
-                except OSError:
-                    pass
-            app.logger.exception("Could not save food subscription payment request")
-            flash("Could not submit payment request. Please try again.")
-            return redirect(url_for("food_business_renewal", business_id=business.id, plan=plan_key))
 
+            # Delete uploaded screenshot if database saving fails
+            if proof_path:
+                delete_file(proof_path)
+
+            app.logger.exception(
+                "Could not save food subscription payment request"
+            )
+
+            flash("Could not submit payment request. Please try again.")
+
+            return redirect(
+                url_for(
+                    "food_business_renewal",
+                    business_id=business.id,
+                    plan=plan_key
+                )
+            )
         flash("Payment request submitted. Your subscription will change only after admin verifies the payment.")
         return redirect(url_for("food_owner_dashboard"))
 
@@ -3007,20 +3154,43 @@ def food_business_renewal(business_id):
 
 @app.route("/admin/payment-proof/<int:payment_id>")
 def view_payment_proof(payment_id):
+
+    # Only admins can view payment screenshots
     if "user_id" not in session or session.get("role") != "admin":
         abort(403)
 
-    payment = db.session.get(FoodSubscriptionPaymentRequest, payment_id)
+    payment = db.session.get(
+        FoodSubscriptionPaymentRequest,
+        payment_id
+    )
 
     if payment is None or not payment.proof_image:
         abort(404)
 
+    # New DBByte payment screenshots
+    if payment.proof_image.startswith("payment-proofs/"):
+
+        image_data = download_file(payment.proof_image)
+
+        if not image_data:
+            abort(404)
+
+        content_type = mimetypes.guess_type(
+            payment.proof_image
+        )[0]
+
+        return send_file(
+            BytesIO(image_data),
+            mimetype=content_type or "application/octet-stream",
+            as_attachment=False
+        )
+
+    # Support older locally stored screenshots
     return send_from_directory(
         PAYMENT_PROOF_FOLDER,
         payment.proof_image,
         as_attachment=False
     )
-
 
 @app.route("/admin/food-payment/<int:payment_id>/review", methods=["POST"])
 def review_food_subscription_payment(payment_id):
@@ -4008,15 +4178,15 @@ def validate_coordinates(latitude, longitude):
 # ADD PG
 # =========================
 
+
 @app.route("/add-pg", methods=["GET", "POST"])
 def add_pg():
 
-    # Only logged-in owners can add PGs
     if "user_id" not in session or session.get("role") != "owner":
         return redirect(url_for("owner_login"))
 
     if request.method == "POST":
-                # Validate all PG form fields before processing the upload
+
         validation_error = validate_pg_form(request.form)
 
         if validation_error:
@@ -4030,9 +4200,9 @@ def add_pg():
         total_rooms = request.form["total_rooms"]
         available_rooms = request.form["available_rooms"]
 
-        # Location captured from owner's device
         latitude = request.form.get("latitude")
         longitude = request.form.get("longitude")
+
         if not validate_coordinates(latitude, longitude):
             flash("Please enter valid latitude and longitude values.")
             return render_template("add_pg.html")
@@ -4046,20 +4216,19 @@ def add_pg():
         description = request.form["description"].strip()
         contact = request.form["contact"].strip()
 
-
-        
+        # =========================
         # FRONT IMAGE
+        # =========================
+
         front_image = request.files.get("front_image")
         front_image_filename = None
 
         if front_image and front_image.filename:
 
-            # 1. Check allowed image format
             if not allowed_image(front_image.filename):
                 flash("Invalid image format. Please upload JPG, JPEG, PNG or WEBP.")
                 return render_template("add_pg.html")
 
-            # 2. Check individual image size (maximum 5 MB)
             front_image.seek(0, os.SEEK_END)
             image_size = front_image.tell()
             front_image.seek(0)
@@ -4068,12 +4237,10 @@ def add_pg():
                 flash("Image must be 5 MB or smaller.")
                 return render_template("add_pg.html")
 
-            # 3. Validate actual image content
             if not validate_image(front_image):
-                flash("The uploaded file is not a valid image. Please upload a valid JPG, PNG or WEBP image.")
+                flash("The uploaded file is not a valid image.")
                 return render_template("add_pg.html")
 
-            # 4. Generate a secure unique filename
             original_filename = secure_filename(front_image.filename)
 
             if not original_filename:
@@ -4082,19 +4249,21 @@ def add_pg():
 
             unique_filename = str(uuid.uuid4()) + "_" + original_filename
 
-            # 5. Save image
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+            # Upload directly to DBByte
+            object_name = "pg-images/" + unique_filename
 
-            save_path = os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                unique_filename
+            front_image_filename = upload_file(
+                front_image,
+                object_name
             )
 
-            front_image.save(save_path)
-            front_image_filename = unique_filename
-        # -------------------------
+            if not front_image_filename:
+                flash("Unable to upload PG image. Please try again.")
+                return render_template("add_pg.html")
+
+        # =========================
         # CREATE PG
-        # -------------------------
+        # =========================
 
         new_pg = PG(
             owner_id=session["user_id"],
@@ -4122,30 +4291,19 @@ def add_pg():
         except SQLAlchemyError:
             db.session.rollback()
 
-            # Remove the uploaded image if database insertion fails
+            # Delete uploaded DBByte image if database insertion fails
             if front_image_filename:
-                image_path = os.path.join(
-                    app.config["UPLOAD_FOLDER"],
-                    front_image_filename
-                )
-
-                try:
-                    if os.path.isfile(image_path):
-                        os.remove(image_path)
-
-                except OSError:
-                    app.logger.exception(
-                        "Could not remove image after failed PG creation"
-                    )
+                delete_file(front_image_filename)
 
             app.logger.exception("Failed to create PG")
-            flash("Unable to add the PG right now. Please try again.")
 
+            flash("Unable to add the PG right now. Please try again.")
             return render_template("add_pg.html")
 
         flash("PG added successfully with location!")
 
         return redirect(url_for("owner_dashboard"))
+
     return render_template("add_pg.html")
 
 # =========================
@@ -4175,10 +4333,8 @@ def edit_pg(pg_id):
         validation_error = validate_pg_form(request.form)
 
         if validation_error:
-        
             flash(validation_error)
             return render_template("edit_pg.html", pg=pg)
-        
 
         # =========================
         # RECEIVE AND VALIDATE IMAGE
@@ -4186,30 +4342,31 @@ def edit_pg(pg_id):
 
         front_image = request.files.get("front_image")
         new_image_filename = None
-        save_path = None
+        uploaded_object_name = None
         old_image_filename = pg.front_image
 
         if front_image and front_image.filename:
 
             if not allowed_image(front_image.filename):
-                
                 flash(
                     "Invalid image format. "
                     "Please upload JPG, JPEG, PNG or WEBP."
                 )
                 return render_template("edit_pg.html", pg=pg)
 
-            # 2. Check individual image size (maximum 5 MB)
+            # Check individual image size (maximum 5 MB)
             front_image.seek(0, os.SEEK_END)
             image_size = front_image.tell()
             front_image.seek(0)
 
             if image_size > MAX_PG_IMAGE_SIZE:
-                flash("Image is too large! Please upload smaller than 5 MB.","error")
+                flash(
+                    "Image is too large! Please upload smaller than 5 MB.",
+                    "error"
+                )
                 return render_template("edit_pg.html", pg=pg)
 
             if not validate_image(front_image):
-            
                 flash(
                     "The uploaded file is not a valid image. "
                     "Please upload a valid JPG, PNG or WEBP image."
@@ -4250,40 +4407,41 @@ def edit_pg(pg_id):
             pg.contact = request.form["contact"].strip()
 
             # =========================
-            # SAVE NEW IMAGE IF PROVIDED
+            # UPLOAD NEW IMAGE TO DBBYTE
             # =========================
 
             if new_image_filename:
 
-                os.makedirs(
-                    app.config["UPLOAD_FOLDER"],
-                    exist_ok=True
+                uploaded_object_name = (
+                    "pg-images/" + new_image_filename
                 )
 
-                save_path = os.path.join(
-                    app.config["UPLOAD_FOLDER"],
-                    new_image_filename
+                result = upload_file(
+                    front_image,
+                    uploaded_object_name
                 )
 
-                # Save the new image file
-                front_image.save(save_path)
+                if not result:
+                    raise RuntimeError(
+                        "Unable to upload the new PG image to DBByte."
+                    )
 
-                # Update the database reference
-                pg.front_image = new_image_filename
+                # Store DBByte object name in database
+                pg.front_image = result
 
             # Commit all PG changes together
             db.session.commit()
 
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
 
-            # Remove the new file if the update fails
-            if save_path and os.path.isfile(save_path):
+            # Delete newly uploaded image if database update fails
+            if uploaded_object_name:
                 try:
-                    os.remove(save_path)
-                except OSError:
+                    delete_file(uploaded_object_name)
+                except Exception:
                     app.logger.exception(
-                        "Could not remove failed upload for PG ID %s",
+                        "Could not delete failed DBByte upload for PG ID %s",
                         pg_id
                     )
 
@@ -4296,21 +4454,28 @@ def edit_pg(pg_id):
             return render_template("edit_pg.html", pg=pg)
 
         # =========================
-        # REMOVE OLD IMAGE AFTER COMMIT
+        # DELETE OLD IMAGE AFTER SUCCESSFUL COMMIT
         # =========================
 
         if new_image_filename and old_image_filename:
 
-            old_image_path = os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                old_image_filename
-            )
-
             try:
-                if os.path.isfile(old_image_path):
-                    os.remove(old_image_path)
+                # Old images stored in DBByte
+                if old_image_filename.startswith("pg-images/"):
+                    delete_file(old_image_filename)
 
-            except OSError:
+                # Legacy images stored locally
+                elif "/" not in old_image_filename and "\\" not in old_image_filename:
+
+                    old_image_path = os.path.join(
+                        app.config["UPLOAD_FOLDER"],
+                        old_image_filename
+                    )
+
+                    if os.path.isfile(old_image_path):
+                        os.remove(old_image_path)
+
+            except Exception:
                 app.logger.exception(
                     "Could not remove previous image for PG ID %s",
                     pg_id
@@ -4376,16 +4541,24 @@ def delete_pg(pg_id):
         db.session.commit()
 
         # Remove the uploaded image after successful database deletion
+        # Remove the uploaded image after successful database deletion
         if image_filename:
-            image_path = os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                image_filename
-            )
-
             try:
-                if os.path.isfile(image_path):
-                    os.remove(image_path)
-            except OSError:
+                # Delete image from DBByte
+                if image_filename.startswith("pg-images/"):
+                    delete_file(image_filename)
+
+                # Delete old local image (backward compatibility)
+                elif "/" not in image_filename and "\\" not in image_filename:
+                    image_path = os.path.join(
+                        app.config["UPLOAD_FOLDER"],
+                        image_filename
+                    )
+
+                    if os.path.isfile(image_path):
+                        os.remove(image_path)
+
+            except Exception:
                 app.logger.exception(
                     "Could not remove image for deleted PG ID %s",
                     pg_id
@@ -4459,12 +4632,17 @@ def food_owner_dashboard():
             if not isinstance(photo_paths, list):
                 photo_paths = []
 
+            
             business.display_menu_photos = [
                 path for path in photo_paths
                 if (
                     isinstance(path, str)
-                    and path.startswith("uploads/food_menus/")
+                    and (
+                        path.startswith("food-menus/")
+                        or path.startswith("uploads/food_menus/")
+                    )
                     and ".." not in path.split("/")
+                    and "\\" not in path
                 )
             ]
 
@@ -4756,30 +4934,33 @@ def edit_food_business(business_id):
             )
 
         # ----------------------------------
-        # SAVE PHOTOS AND UPDATE DATABASE
+        # SAVE PHOTOS TO DBBYTE AND UPDATE DATABASE
         # ----------------------------------
 
-        newly_saved_files = []
+        uploaded_objects = []
 
         try:
 
-            # Save validated images
+            # Upload validated images to DBByte
             for photo, extension in valid_uploads:
 
                 filename = uuid.uuid4().hex + "." + extension
 
-                file_path = os.path.join(
-                    upload_folder,
-                    filename
+                object_name = "food-menus/" + filename
+
+                saved_object = upload_file(
+                    photo,
+                    object_name
                 )
 
-                photo.save(file_path)
+                if not saved_object:
+                    raise RuntimeError(
+                        "Failed to upload menu photo to DBByte."
+                    )
 
-                newly_saved_files.append(file_path)
+                uploaded_objects.append(saved_object)
 
-                menu_photos.append(
-                    "uploads/food_menus/" + filename
-                )
+                menu_photos.append(saved_object)
 
             # Update database photo list
             business.menu_photos = json.dumps(menu_photos)
@@ -4791,30 +4972,41 @@ def edit_food_business(business_id):
                 "success"
             )
 
-            # Delete removed physical images only after successful commit
+            # Delete removed photos only after successful database commit
             for old_photo in removed_photo_paths:
 
-                if (
-                    isinstance(old_photo, str)
-                    and old_photo.startswith("uploads/food_menus/")
-                    and ".." not in old_photo.split("/")
-                ):
+                if not isinstance(old_photo, str):
+                    continue
 
-                    old_file_path = os.path.join(
-                        app.root_path,
-                        "static",
-                        old_photo
-                    )
+                try:
 
-                    try:
+                    # Delete DBByte images
+                    if old_photo.startswith("food-menus/"):
+
+                        delete_file(old_photo)
+
+                    # Delete old local images (backward compatibility)
+                    elif (
+                        old_photo.startswith("uploads/food_menus/")
+                        and ".." not in old_photo.split("/")
+                        and "\\" not in old_photo
+                    ):
+
+                        old_file_path = os.path.join(
+                            app.root_path,
+                            "static",
+                            old_photo
+                        )
+
                         if os.path.isfile(old_file_path):
                             os.remove(old_file_path)
 
-                    except OSError:
-                        app.logger.exception(
-                            "Unable to delete removed menu image: %s",
-                            old_file_path
-                        )
+                except Exception:
+
+                    app.logger.exception(
+                        "Unable to delete removed menu image: %s",
+                        old_photo
+                    )
 
             return redirect(
                 url_for("food_owner_dashboard")
@@ -4824,17 +5016,17 @@ def edit_food_business(business_id):
 
             db.session.rollback()
 
-            # Remove newly uploaded files if database update fails
-            for new_file in newly_saved_files:
+            # Delete newly uploaded DBByte images if database update fails
+            for object_name in uploaded_objects:
 
                 try:
-                    if os.path.isfile(new_file):
-                        os.remove(new_file)
+                    delete_file(object_name)
 
-                except OSError:
+                except Exception:
+
                     app.logger.exception(
-                        "Unable to clean up newly uploaded image: %s",
-                        new_file
+                        "Unable to clean up newly uploaded menu image: %s",
+                        object_name
                     )
 
             app.logger.exception(
@@ -4846,17 +5038,22 @@ def edit_food_business(business_id):
                 "Unable to save changes. Please try again.",
                 "error"
             )
-
     # ----------------------------------
     # PREPARE PHOTOS FOR DISPLAY
     # ----------------------------------
 
     business.display_menu_photos = [
-        photo for photo in menu_photos
-        if isinstance(photo, str)
-        and photo.startswith("uploads/food_menus/")
+    photo for photo in menu_photos
+    if (
+        isinstance(photo, str)
+        and (
+            photo.startswith("food-menus/")
+            or photo.startswith("uploads/food_menus/")
+        )
         and ".." not in photo.split("/")
-    ]
+        and "\\" not in photo
+    )
+]
 
     return render_template(
         "edit_food_business.html",

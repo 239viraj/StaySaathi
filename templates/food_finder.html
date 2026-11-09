@@ -141,13 +141,13 @@
                                     {% for photo_path in business.display_menu_photos %}
 
                                         <a
-                                            href="{{ url_for('static', filename=photo_path) }}"
+                                            href="{{ url_for('food_menu_image', object_name=photo_path) }}"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="food-menu-photo-link"
                                         >
                                             <img
-                                                src="{{ url_for('static', filename=photo_path) }}"
+                                                src="{{ url_for('food_menu_image', object_name=photo_path) }}"
                                                 alt="Menu photo for {{ business.business_name }}"
                                                 class="food-menu-photo"
                                                 loading="lazy"

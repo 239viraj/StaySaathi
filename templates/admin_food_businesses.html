@@ -90,7 +90,7 @@
                             {% for photo in business.display_menu_photos %}
 
                                 <img
-                                    src="{{ url_for('static', filename=photo) }}"
+                                    src="{{ url_for('food_menu_image', object_name=photo) }}"
                                     alt="Menu photo for {{ business.business_name }}"
                                     loading="lazy"
                                 >

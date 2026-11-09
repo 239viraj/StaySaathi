@@ -226,8 +226,8 @@
 
                                     <img
                                         src="{{ url_for(
-                                            'static',
-                                            filename='uploads/pg/' + pg.front_image
+                                            'pg_image',
+                                            object_name=pg.front_image
                                         ) }}"
                                         alt="{{ pg.name }} front view"
                                     >

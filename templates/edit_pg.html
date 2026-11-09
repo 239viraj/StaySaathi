@@ -365,7 +365,7 @@
                         <p>Current PG image:</p>
 
                         <img
-                            src="{{ url_for('static', filename='uploads/pg/' ~ pg.front_image) }}"
+                            src="{{ url_for('pg_image', object_name=pg.front_image) }}"
                             alt="PG Image"
                             style="max-width: 260px;
                                 width: 100%;
